@@ -1,0 +1,247 @@
+{
+  "info": {
+    "name": "AaramWale API",
+    "description": "Complete API collection for AaramWale massage chair rental system",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "adminToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "employeeToken",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Register Admin",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Super Admin\",\n  \"email\": \"admin@aaramwale.com\",\n  \"password\": \"admin123\",\n  \"role\": \"ADMIN\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "register"]
+            }
+          }
+        },
+        {
+          "name": "Login Admin",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@aaramwale.com\",\n  \"password\": \"admin123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Login Employee",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"employee@aaramwale.com\",\n  \"password\": \"employee123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Outlets",
+      "item": [
+        {
+          "name": "Create Outlet",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{adminToken}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Downtown Branch\",\n  \"address\": \"123 Main Street, Floor 2\",\n  \"city\": \"Mumbai\",\n  \"phone\": \"+91-9876543210\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/outlets",
+              "host": ["{{baseUrl}}"],
+              "path": ["outlets"]
+            }
+          }
+        },
+        {
+          "name": "Get All Outlets",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{adminToken}}"}],
+            "url": {
+              "raw": "{{baseUrl}}/outlets",
+              "host": ["{{baseUrl}}"],
+              "path": ["outlets"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Create Employee",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{adminToken}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"John Employee\",\n  \"email\": \"employee@aaramwale.com\",\n  \"password\": \"employee123\",\n  \"role\": \"EMPLOYEE\",\n  \"outletId\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users",
+              "host": ["{{baseUrl}}"],
+              "path": ["users"]
+            }
+          }
+        },
+        {
+          "name": "Get All Users",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{adminToken}}"}],
+            "url": {
+              "raw": "{{baseUrl}}/users",
+              "host": ["{{baseUrl}}"],
+              "path": ["users"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Chairs",
+      "item": [
+        {
+          "name": "Create Chair",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{adminToken}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"outletId\": 1,\n  \"chairNumber\": \"Chair-1\",\n  \"rentPerToken\": 100.00\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/chairs",
+              "host": ["{{baseUrl}}"],
+              "path": ["chairs"]
+            }
+          }
+        },
+        {
+          "name": "Get Chairs by Outlet",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{employeeToken}}"}],
+            "url": {
+              "raw": "{{baseUrl}}/chairs/outlet/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["chairs", "outlet", "1"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Tokens",
+      "item": [
+        {
+          "name": "Generate Token (Employee)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{employeeToken}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"chairId\": 1,\n  \"customerName\": \"Rahul Kumar\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/tokens",
+              "host": ["{{baseUrl}}"],
+              "path": ["tokens"]
+            }
+          }
+        },
+        {
+          "name": "Get My Tokens (Employee)",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{employeeToken}}"}],
+            "url": {
+              "raw": "{{baseUrl}}/tokens/my-tokens",
+              "host": ["{{baseUrl}}"],
+              "path": ["tokens", "my-tokens"]
+            }
+          }
+        },
+        {
+          "name": "Get Today Stats",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{employeeToken}}"}],
+            "url": {
+              "raw": "{{baseUrl}}/tokens/stats/today",
+              "host": ["{{baseUrl}}"],
+              "path": ["tokens", "stats", "today"]
+            }
+          }
+        },
+        {
+          "name": "Get All Tokens (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{adminToken}}"}],
+            "url": {
+              "raw": "{{baseUrl}}/tokens",
+              "host": ["{{baseUrl}}"],
+              "path": ["tokens"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
