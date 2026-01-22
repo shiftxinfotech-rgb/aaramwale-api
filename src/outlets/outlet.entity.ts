@@ -17,9 +17,6 @@ export class Outlet {
   @Column()
   city: string;
 
-  @Column({ nullable: true })
-  phone: string;
-
   @Column({ default: true })
   isActive: boolean;
 

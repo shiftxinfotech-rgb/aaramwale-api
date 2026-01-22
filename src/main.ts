@@ -28,10 +28,12 @@ async function bootstrap() {
     .setVersion('1.0')
     .addBearerAuth()
     .addTag('Authentication', 'User authentication and registration')
-    .addTag('Users', 'User management (Admin only)')
+    .addTag('Admin', 'Admin management')
+    .addTag('Employees', 'Employee management')
     .addTag('Outlets', 'Outlet management')
     .addTag('Chairs', 'Chair management')
     .addTag('Tokens', 'Token generation and management')
+    .addTag('Customers', 'Customer management')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);

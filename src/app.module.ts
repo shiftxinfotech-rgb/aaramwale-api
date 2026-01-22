@@ -7,6 +7,8 @@ import { OutletsModule } from './outlets/outlets.module';
 import { ChairsModule } from './chairs/chairs.module';
 import { TokensModule } from './tokens/tokens.module';
 import { CustomersModule } from './customers/customers.module';
+import { EmployeesModule } from './employees/employees.module';
+import { AdminModule } from './admin/admin.module';
 
 @Module({
   imports: [
@@ -30,10 +32,12 @@ import { CustomersModule } from './customers/customers.module';
 
     AuthModule,
     UsersModule,
+    EmployeesModule,
+    AdminModule,
     OutletsModule,
     ChairsModule,
     TokensModule,
     CustomersModule,
   ],
 })
-export class AppModule {}
+export class AppModule { }

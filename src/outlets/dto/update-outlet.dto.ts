@@ -17,11 +17,6 @@ export class UpdateOutletDto {
   @IsOptional()
   city?: string;
 
-  @ApiProperty({ example: '+91-9876543210', required: false })
-  @IsString()
-  @IsOptional()
-  phone?: string;
-
   @ApiProperty({ example: true, required: false })
   @IsBoolean()
   @IsOptional()
