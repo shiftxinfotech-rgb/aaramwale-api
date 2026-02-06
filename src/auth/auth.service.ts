@@ -12,7 +12,7 @@ export class AuthService {
     @InjectRepository(User)
     private userRepository: Repository<User>,
     private jwtService: JwtService,
-  ) {}
+  ) { }
 
   async register(registerDto: RegisterDto) {
     const { email, password, name, role, outletId } = registerDto;
@@ -84,6 +84,9 @@ export class AuthService {
         name: user.name,
         role: user.role,
         outletId: user.outletId,
+        isActive: user.isActive,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
       },
     };
   }
