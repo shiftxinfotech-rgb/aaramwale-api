@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsString, IsNumber } from 'class-validator';
+import { IsNotEmpty, IsString, IsNumber, IsBoolean, IsOptional } from 'class-validator';
 
 export class CreateChairDto {
   @ApiProperty({ example: 1 })
@@ -16,4 +16,9 @@ export class CreateChairDto {
   @IsNumber()
   @IsNotEmpty()
   rentPerToken: number;
+
+  @ApiProperty({ example: true, required: false })
+  @IsBoolean()
+  @IsOptional()
+  isActive?: boolean;
 }

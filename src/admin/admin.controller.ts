@@ -20,16 +20,24 @@ export class AdminController {
     @ApiOperation({ summary: 'Create a new admin (Admin only)' })
     @SwaggerApiResponse({ status: 201, description: 'Admin created successfully' })
     @SwaggerApiResponse({ status: 403, description: 'Forbidden' })
-    create(@Body() createAdminDto: CreateAdminDto) {
-        return this.adminService.create(createAdminDto);
+    async create(@Body() createAdminDto: CreateAdminDto) {
+        const data = await this.adminService.create(createAdminDto);
+        return {
+            message: 'Admin created successfully',
+            data,
+        };
     }
 
     @Get()
     @Roles(UserRole.ADMIN)
     @ApiOperation({ summary: 'Get all admins (Admin only)' })
     @SwaggerApiResponse({ status: 200, description: 'List of all admins' })
-    findAll() {
-        return this.adminService.findAll();
+    async findAll() {
+        const data = await this.adminService.findAll();
+        return {
+            message: 'Admins retrieved successfully',
+            data,
+        };
     }
 
     @Get(':id')
@@ -37,8 +45,12 @@ export class AdminController {
     @ApiOperation({ summary: 'Get an admin by ID (Admin only)' })
     @SwaggerApiResponse({ status: 200, description: 'Admin details' })
     @SwaggerApiResponse({ status: 404, description: 'Admin not found' })
-    findOne(@Param('id') id: string) {
-        return this.adminService.findOne(+id);
+    async findOne(@Param('id') id: string) {
+        const data = await this.adminService.findOne(+id);
+        return {
+            message: 'Admin retrieved successfully',
+            data,
+        };
     }
 
     @Patch(':id')
@@ -46,8 +58,12 @@ export class AdminController {
     @ApiOperation({ summary: 'Update an admin (Admin only)' })
     @SwaggerApiResponse({ status: 200, description: 'Admin updated successfully' })
     @SwaggerApiResponse({ status: 404, description: 'Admin not found' })
-    update(@Param('id') id: string, @Body() updateAdminDto: UpdateAdminDto) {
-        return this.adminService.update(+id, updateAdminDto);
+    async update(@Param('id') id: string, @Body() updateAdminDto: UpdateAdminDto) {
+        const data = await this.adminService.update(+id, updateAdminDto);
+        return {
+            message: 'Admin updated successfully',
+            data,
+        };
     }
 
     @Delete(':id')
@@ -55,7 +71,11 @@ export class AdminController {
     @ApiOperation({ summary: 'Delete an admin (Admin only)' })
     @SwaggerApiResponse({ status: 200, description: 'Admin deleted successfully' })
     @SwaggerApiResponse({ status: 404, description: 'Admin not found' })
-    remove(@Param('id') id: string) {
-        return this.adminService.remove(+id);
+    async remove(@Param('id') id: string) {
+        await this.adminService.remove(+id);
+        return {
+            message: 'Admin deleted successfully',
+            data: null,
+        };
     }
 }

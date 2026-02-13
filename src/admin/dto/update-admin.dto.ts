@@ -7,10 +7,6 @@ export class UpdateAdminDto {
     @IsOptional()
     name?: string;
 
-    @ApiProperty({ example: 'admin@example.com', required: false })
-    @IsEmail()
-    @IsOptional()
-    email?: string;
 
     @ApiProperty({ example: 'newpassword123', required: false })
     @IsString()
