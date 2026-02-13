@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User, UserRole } from '../users/user.entity';
+import { Attendance } from '../attendance/attendance.entity';
 import { CreateEmployeeDto } from './dto/create-employee.dto';
 import { UpdateEmployeeDto } from './dto/update-employee.dto';
 
@@ -10,7 +11,34 @@ export class EmployeesService {
     constructor(
         @InjectRepository(User)
         private userRepository: Repository<User>,
+        @InjectRepository(Attendance)
+        private attendanceRepository: Repository<Attendance>,
     ) { }
+
+    // Helper: attach attendance status to employees
+    private async attachAttendanceStatus(employees: User[]): Promise<any[]> {
+        const employeeIds = employees.map(e => e.id);
+
+        // Get all active attendance sessions for these employees in one query
+        const activeSessions = await this.attendanceRepository.find({
+            where: employeeIds.map(id => ({ userId: id, status: 'PRESENT' })),
+        });
+
+        // Create a map for quick lookup
+        const sessionMap = new Map<number, Attendance>();
+        for (const session of activeSessions) {
+            sessionMap.set(session.userId, session);
+        }
+
+        return employees.map(employee => {
+            const session = sessionMap.get(employee.id);
+            return {
+                ...employee,
+                isClockedIn: !!session,
+                lastClockIn: session ? session.clockIn : null,
+            };
+        });
+    }
 
     async create(createEmployeeDto: CreateEmployeeDto): Promise<User> {
         const { email, password, ...rest } = createEmployeeDto;
@@ -37,23 +65,27 @@ export class EmployeesService {
         return result as User;
     }
 
-    async findAll(): Promise<User[]> {
-        return await this.userRepository.find({
+    async findAll(): Promise<any[]> {
+        const employees = await this.userRepository.find({
             where: { role: UserRole.EMPLOYEE },
             relations: ['outlet'],
             order: { createdAt: 'DESC' },
         });
+
+        return this.attachAttendanceStatus(employees);
     }
 
-    async findByOutlet(outletId: number): Promise<User[]> {
-        return await this.userRepository.find({
+    async findByOutlet(outletId: number): Promise<any[]> {
+        const employees = await this.userRepository.find({
             where: { outletId, role: UserRole.EMPLOYEE },
             relations: ['outlet'],
             order: { createdAt: 'DESC' },
         });
+
+        return this.attachAttendanceStatus(employees);
     }
 
-    async findOne(id: number): Promise<User> {
+    async findOne(id: number): Promise<any> {
         const employee = await this.userRepository.findOne({
             where: { id, role: UserRole.EMPLOYEE },
             relations: ['outlet'],
@@ -63,10 +95,11 @@ export class EmployeesService {
             throw new NotFoundException(`Employee with ID ${id} not found`);
         }
 
-        return employee;
+        const [enriched] = await this.attachAttendanceStatus([employee]);
+        return enriched;
     }
 
-    async update(id: number, updateEmployeeDto: UpdateEmployeeDto): Promise<User> {
+    async update(id: number, updateEmployeeDto: UpdateEmployeeDto): Promise<any> {
         const employee = await this.userRepository.findOne({
             where: { id, role: UserRole.EMPLOYEE },
         });
@@ -76,7 +109,7 @@ export class EmployeesService {
         }
 
         Object.assign(employee, updateEmployeeDto);
-        const updatedEmployee = await this.userRepository.save(employee);
+        await this.userRepository.save(employee);
 
         // Reload with relations
         const fullEmployee = await this.userRepository.findOne({
@@ -88,7 +121,8 @@ export class EmployeesService {
             throw new NotFoundException(`Employee with ID ${id} not found`);
         }
 
-        return fullEmployee;
+        const [enriched] = await this.attachAttendanceStatus([fullEmployee]);
+        return enriched;
     }
 
     async remove(id: number): Promise<void> {

@@ -8,6 +8,7 @@ import { ChairsModule } from './chairs/chairs.module';
 import { TokensModule } from './tokens/tokens.module';
 import { CustomersModule } from './customers/customers.module';
 import { EmployeesModule } from './employees/employees.module';
+import { AttendanceModule } from './attendance/attendance.module';
 import { AdminModule } from './admin/admin.module';
 
 @Module({
@@ -38,6 +39,7 @@ import { AdminModule } from './admin/admin.module';
     ChairsModule,
     TokensModule,
     CustomersModule,
+    AttendanceModule,
   ],
 })
 export class AppModule { }

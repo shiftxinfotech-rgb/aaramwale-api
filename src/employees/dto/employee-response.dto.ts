@@ -26,6 +26,12 @@ export class EmployeeResponseDto {
     @ApiProperty({ example: 1 })
     outletId: number;
 
+    @ApiProperty({ example: true, description: 'Whether the employee is currently clocked in' })
+    isClockedIn: boolean;
+
+    @ApiProperty({ example: '2026-02-13T09:00:00Z', nullable: true, description: 'Last clock-in time if currently working' })
+    lastClockIn: Date;
+
     @ApiProperty({ example: '2026-02-13T14:35:53Z' })
     createdAt: Date;
 
