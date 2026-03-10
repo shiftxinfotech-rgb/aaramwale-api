@@ -10,6 +10,7 @@ import { CustomersModule } from './customers/customers.module';
 import { EmployeesModule } from './employees/employees.module';
 import { AttendanceModule } from './attendance/attendance.module';
 import { AdminModule } from './admin/admin.module';
+import { getTypeOrmConfig } from './database/typeorm.config';
 
 @Module({
   imports: [
@@ -18,17 +19,9 @@ import { AdminModule } from './admin/admin.module';
       isGlobal: true,
     }),
 
-    // Connects NestJS to PostgreSQL
-    TypeOrmModule.forRoot({
-      type: 'postgres',
-      host: process.env.DB_HOST,
-      port: Number(process.env.DB_PORT),
-      username: process.env.DB_USER,
-      password: process.env.DB_PASS,
-      database: process.env.DB_NAME,
-      entities: [__dirname + '/**/*.entity{.ts,.js}'],
-      synchronize: true, // Set to false in production
-      logging: false,
+    // Connects NestJS to PostgreSQL after env has been loaded
+    TypeOrmModule.forRootAsync({
+      useFactory: () => getTypeOrmConfig(),
     }),
 
     AuthModule,

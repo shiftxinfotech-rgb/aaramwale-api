@@ -10,7 +10,7 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../users/user.entity';
 
 @ApiTags('Chairs')
-@ApiBearerAuth()
+@ApiBearerAuth('access-token')
 @Controller('chairs')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class ChairsController {
@@ -20,6 +20,7 @@ export class ChairsController {
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Create a new chair (Admin only)' })
   @ApiResponse({ status: 201, description: 'Chair created successfully', type: ChairResponseDto })
+  @ApiResponse({ status: 401, description: 'Unauthorized. Add Bearer token from /auth/login' })
   @ApiResponse({ status: 403, description: 'Forbidden' })
   async create(@Body() createChairDto: CreateChairDto) {
     const data = await this.chairsService.create(createChairDto);
@@ -31,8 +32,10 @@ export class ChairsController {
 
   @Get()
   @Roles(UserRole.ADMIN, UserRole.EMPLOYEE)
-  @ApiOperation({ summary: 'Get all chairs' })
+  @ApiOperation({ summary: 'Get all chairs (Login required for admin or employee)' })
   @ApiResponse({ status: 200, description: 'List of all chairs', type: [ChairResponseDto] })
+  @ApiResponse({ status: 401, description: 'Unauthorized. Add Bearer token from /auth/login' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
   async findAll() {
     const data = await this.chairsService.findAll();
     return {
@@ -43,8 +46,10 @@ export class ChairsController {
 
   @Get('outlet/:outletId')
   @Roles(UserRole.ADMIN, UserRole.EMPLOYEE)
-  @ApiOperation({ summary: 'Get all chairs by outlet' })
+  @ApiOperation({ summary: 'Get all chairs by outlet (Login required for admin or employee)' })
   @ApiResponse({ status: 200, description: 'List of chairs for outlet', type: [ChairResponseDto] })
+  @ApiResponse({ status: 401, description: 'Unauthorized. Add Bearer token from /auth/login' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
   async findByOutlet(@Param('outletId') outletId: string) {
     const data = await this.chairsService.findByOutlet(+outletId);
     return {
@@ -55,8 +60,10 @@ export class ChairsController {
 
   @Get(':id')
   @Roles(UserRole.ADMIN, UserRole.EMPLOYEE)
-  @ApiOperation({ summary: 'Get a chair by ID' })
+  @ApiOperation({ summary: 'Get a chair by ID (Login required for admin or employee)' })
   @ApiResponse({ status: 200, description: 'Chair details', type: ChairResponseDto })
+  @ApiResponse({ status: 401, description: 'Unauthorized. Add Bearer token from /auth/login' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
   @ApiResponse({ status: 404, description: 'Chair not found' })
   async findOne(@Param('id') id: string) {
     const data = await this.chairsService.findOne(+id);
@@ -70,6 +77,8 @@ export class ChairsController {
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Update a chair (Admin only)' })
   @ApiResponse({ status: 200, description: 'Chair updated successfully', type: ChairResponseDto })
+  @ApiResponse({ status: 401, description: 'Unauthorized. Add Bearer token from /auth/login' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
   @ApiResponse({ status: 404, description: 'Chair not found' })
   async update(@Param('id') id: string, @Body() updateChairDto: UpdateChairDto) {
     const data = await this.chairsService.update(+id, updateChairDto);
@@ -83,6 +92,8 @@ export class ChairsController {
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Delete a chair (Admin only)' })
   @ApiResponse({ status: 200, description: 'Chair deleted successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized. Add Bearer token from /auth/login' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
   @ApiResponse({ status: 404, description: 'Chair not found' })
   async remove(@Param('id') id: string) {
     await this.chairsService.remove(+id);

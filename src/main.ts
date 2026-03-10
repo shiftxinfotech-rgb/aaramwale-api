@@ -30,15 +30,23 @@ async function bootstrap() {
   // Swagger API Documentation
   const config = new DocumentBuilder()
     .setTitle('AaramWale API')
-    .setDescription('Multi-outlet massage chair rental & token management system')
-    .setVersion('1.0')
-    .addBearerAuth()
+    .setDescription('Multi-outlet massage chair rental and outlet-scoped token management API')
+    .setVersion('1.1')
+    .addBearerAuth(
+      {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        description: 'Paste employee or admin JWT access token here',
+      },
+      'access-token',
+    )
     .addTag('Authentication', 'User authentication and registration')
     .addTag('Admin', 'Admin management')
     .addTag('Employees', 'Employee management')
     .addTag('Outlets', 'Outlet management')
     .addTag('Chairs', 'Chair management')
-    .addTag('Tokens', 'Token generation and management')
+    .addTag('Tokens', 'Outlet-scoped token generation and reporting')
     .addTag('Customers', 'Customer management')
     .build();
 

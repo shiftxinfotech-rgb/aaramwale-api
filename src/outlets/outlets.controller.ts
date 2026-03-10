@@ -10,7 +10,7 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../users/user.entity';
 
 @ApiTags('Outlets')
-@ApiBearerAuth()
+@ApiBearerAuth('access-token')
 @Controller('outlets')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class OutletsController {
@@ -20,6 +20,7 @@ export class OutletsController {
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Create a new outlet (Admin only)' })
   @ApiResponse({ status: 201, description: 'Outlet created successfully', type: OutletResponseDto })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden' })
   async create(@Body() createOutletDto: CreateOutletDto) {
     const data = await this.outletsService.create(createOutletDto);
@@ -31,8 +32,10 @@ export class OutletsController {
 
   @Get()
   @Roles(UserRole.ADMIN, UserRole.EMPLOYEE)
-  @ApiOperation({ summary: 'Get all outlets' })
+  @ApiOperation({ summary: 'Get all outlets (Login required for admin or employee)' })
   @ApiResponse({ status: 200, description: 'List of all outlets', type: [OutletResponseDto] })
+  @ApiResponse({ status: 401, description: 'Unauthorized. Add Bearer token from /auth/login' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
   async findAll() {
     const data = await this.outletsService.findAll();
     return {
@@ -43,8 +46,10 @@ export class OutletsController {
 
   @Get(':id')
   @Roles(UserRole.ADMIN, UserRole.EMPLOYEE)
-  @ApiOperation({ summary: 'Get an outlet by ID' })
+  @ApiOperation({ summary: 'Get an outlet by ID (Login required for admin or employee)' })
   @ApiResponse({ status: 200, description: 'Outlet details', type: OutletResponseDto })
+  @ApiResponse({ status: 401, description: 'Unauthorized. Add Bearer token from /auth/login' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
   @ApiResponse({ status: 404, description: 'Outlet not found' })
   async findOne(@Param('id') id: string) {
     const data = await this.outletsService.findOne(+id);
@@ -58,6 +63,8 @@ export class OutletsController {
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Update an outlet (Admin only)' })
   @ApiResponse({ status: 200, description: 'Outlet updated successfully', type: OutletResponseDto })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
   @ApiResponse({ status: 404, description: 'Outlet not found' })
   async update(@Param('id') id: string, @Body() updateOutletDto: UpdateOutletDto) {
     const data = await this.outletsService.update(+id, updateOutletDto);
@@ -71,6 +78,8 @@ export class OutletsController {
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Delete an outlet (Admin only)' })
   @ApiResponse({ status: 200, description: 'Outlet deleted successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
   @ApiResponse({ status: 404, description: 'Outlet not found' })
   async remove(@Param('id') id: string) {
     await this.outletsService.remove(+id);

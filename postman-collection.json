@@ -196,7 +196,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"chairId\": 1,\n  \"customerName\": \"Rahul Kumar\"\n}"
+              "raw": "{\n  \"chairId\": 1,\n  \"amount\": 50,\n  \"status\": \"ACTIVE\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/tokens",

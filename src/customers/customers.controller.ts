@@ -10,7 +10,7 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../users/user.entity';
 
 @ApiTags('Customers')
-@ApiBearerAuth()
+@ApiBearerAuth('access-token')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('customers')
 export class CustomersController {
@@ -54,9 +54,10 @@ export class CustomersController {
   }
 
   @Patch(':id')
-  @Roles(UserRole.ADMIN, UserRole.EMPLOYEE)
-  @ApiOperation({ summary: 'Update customer details' })
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Update customer details (Admin only)' })
   @SwaggerApiResponse({ status: 200, description: 'Customer updated successfully', type: CustomerResponseDto })
+  @SwaggerApiResponse({ status: 403, description: 'Forbidden' })
   @SwaggerApiResponse({ status: 404, description: 'Customer not found' })
   async update(@Param('id') id: string, @Body() updateCustomerDto: UpdateCustomerDto) {
     const data = await this.customersService.update(+id, updateCustomerDto);
@@ -70,6 +71,7 @@ export class CustomersController {
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Delete a customer (Admin only)' })
   @SwaggerApiResponse({ status: 200, description: 'Customer deleted successfully' })
+  @SwaggerApiResponse({ status: 403, description: 'Forbidden' })
   @SwaggerApiResponse({ status: 404, description: 'Customer not found' })
   async remove(@Param('id') id: string) {
     await this.customersService.remove(+id);

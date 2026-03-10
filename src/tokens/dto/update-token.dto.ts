@@ -1,14 +1,15 @@
-import { IsString, IsOptional } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import { IsIn, IsNumber, IsOptional, IsString } from 'class-validator';
+import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export class UpdateTokenDto {
-  @ApiProperty({ example: 'COMPLETED', required: false, enum: ['ACTIVE', 'COMPLETED', 'CANCELLED'] })
+  @ApiPropertyOptional({ example: 'COMPLETED', enum: ['ACTIVE', 'COMPLETED', 'CANCELLED'] })
+  @IsIn(['ACTIVE', 'COMPLETED', 'CANCELLED'])
   @IsString()
   @IsOptional()
   status?: string;
 
-  @ApiProperty({ example: 'Rahul Kumar', required: false })
-  @IsString()
+  @ApiPropertyOptional({ example: 50 })
+  @IsNumber()
   @IsOptional()
-  customerName?: string;
+  amount?: number;
 }

@@ -1,5 +1,5 @@
-import { IsNotEmpty, IsNumber, IsString, IsOptional } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import { IsIn, IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateTokenDto {
   @ApiProperty({ example: 1, description: 'ID of the chair being used' })
@@ -7,8 +7,14 @@ export class CreateTokenDto {
   @IsNotEmpty()
   chairId: number;
 
-  @ApiProperty({ example: 'Rahul Kumar', required: false })
+  @ApiPropertyOptional({ example: 50, description: 'Token amount. Defaults to chair rent if omitted' })
+  @IsNumber()
+  @IsOptional()
+  amount?: number;
+
+  @ApiPropertyOptional({ example: 'ACTIVE', enum: ['ACTIVE', 'COMPLETED', 'CANCELLED'] })
+  @IsIn(['ACTIVE', 'COMPLETED', 'CANCELLED'])
   @IsString()
   @IsOptional()
-  customerName?: string;
+  status?: string;
 }

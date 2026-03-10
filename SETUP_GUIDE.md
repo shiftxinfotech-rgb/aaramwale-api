@@ -285,7 +285,8 @@ GET /chairs/outlet/1
 POST /tokens
 {
   "chairId": 1,
-  "customerName": "Rahul Kumar"
+  "amount": 50,
+  "status": "ACTIVE"
 }
 
 # 4. View their generated tokens

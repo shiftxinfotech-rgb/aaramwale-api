@@ -5,6 +5,8 @@ import { Token } from './token.entity';
 import { Chair } from '../chairs/chair.entity';
 import { CreateTokenDto } from './dto/create-token.dto';
 import { UpdateTokenDto } from './dto/update-token.dto';
+import { TokenListQueryDto } from './dto/token-list-query.dto';
+import { TokenListItemDto } from './dto/token-list-item.dto';
 
 @Injectable()
 export class TokensService {
@@ -16,12 +18,10 @@ export class TokensService {
   ) {}
 
   async create(createTokenDto: CreateTokenDto, userId: number, outletId: number): Promise<Token> {
-    const { chairId, customerName } = createTokenDto;
+    const { chairId, amount, status } = createTokenDto;
 
-    // Verify chair exists and belongs to the outlet
     const chair = await this.chairRepository.findOne({
       where: { id: chairId },
-      relations: ['outlet'],
     });
 
     if (!chair) {
@@ -36,51 +36,39 @@ export class TokensService {
       throw new BadRequestException('Chair is not active');
     }
 
-    // Generate token number (format: YYYYMMDD-OUTLET-CHAIR-SEQ)
-    const today = new Date();
-    const dateStr = today.toISOString().split('T')[0].replace(/-/g, '');
-    
-    // Count tokens created today for this chair
-    const startOfDay = new Date(today.setHours(0, 0, 0, 0));
-    const endOfDay = new Date(today.setHours(23, 59, 59, 999));
-    
-    const todayTokenCount = await this.tokenRepository.count({
-      where: {
-        chairId,
-        createdAt: Between(startOfDay, endOfDay),
-      },
-    });
-
-    const tokenNumber = `${dateStr}-${chair.outletId}-${chairId}-${todayTokenCount + 1}`;
-
-    // Create token
     const token = this.tokenRepository.create({
       outletId: chair.outletId,
       chairId,
       userId,
-      tokenNumber,
-      customerName,
-      amount: chair.rentPerToken,
-      status: 'ACTIVE',
-      startTime: new Date(),
+      amount: amount ?? chair.rentPerToken,
+      status: status ?? 'ACTIVE',
     });
 
     return this.tokenRepository.save(token);
   }
 
-  async findAll(outletId?: number): Promise<Token[]> {
-    const where = outletId ? { outletId } : {};
-    
-    return this.tokenRepository.find({
+  async findAll(filters: {
+    outletId?: number;
+    status?: string;
+    chairId?: number;
+    userId?: number;
+    fromDate?: Date;
+    toDate?: Date;
+  }): Promise<TokenListItemDto[]> {
+    const where = this.buildWhere(filters);
+
+    const tokens = await this.tokenRepository.find({
       where,
       relations: ['outlet', 'chair', 'user'],
       order: { createdAt: 'DESC' },
     });
+
+    return tokens.map((token) => this.toListItem(token));
   }
 
-  async findOne(id: number): Promise<Token> {
+  async findOne(id: number, outletId?: number): Promise<Token> {
     const token = await this.tokenRepository.findOne({
-      where: { id },
+      where: outletId ? { id, outletId } : { id },
       relations: ['outlet', 'chair', 'user'],
     });
 
@@ -91,17 +79,23 @@ export class TokensService {
     return token;
   }
 
-  async findByUser(userId: number, outletId?: number): Promise<Token[]> {
-    const where: any = { userId };
-    if (outletId) {
-      where.outletId = outletId;
-    }
+  async findByUser(userId: number, outletId?: number, query?: Omit<TokenListQueryDto, 'outletId' | 'userId'>): Promise<TokenListItemDto[]> {
+    const where = this.buildWhere({
+      userId,
+      outletId,
+      status: query?.status,
+      chairId: query?.chairId ? +query.chairId : undefined,
+      fromDate: query?.fromDate ? new Date(`${query.fromDate}T00:00:00.000Z`) : undefined,
+      toDate: query?.toDate ? new Date(`${query.toDate}T23:59:59.999Z`) : undefined,
+    });
 
-    return this.tokenRepository.find({
+    const tokens = await this.tokenRepository.find({
       where,
-      relations: ['outlet', 'chair'],
+      relations: ['outlet', 'chair', 'user'],
       order: { createdAt: 'DESC' },
     });
+
+    return tokens.map((token) => this.toListItem(token));
   }
 
   async findByOutlet(outletId: number): Promise<Token[]> {
@@ -130,11 +124,6 @@ export class TokensService {
 
   async update(id: number, updateTokenDto: UpdateTokenDto): Promise<Token> {
     const token = await this.findOne(id);
-
-    // If status is being changed to COMPLETED, set endTime
-    if (updateTokenDto.status === 'COMPLETED' && token.status !== 'COMPLETED') {
-      token.endTime = new Date();
-    }
 
     Object.assign(token, updateTokenDto);
     return this.tokenRepository.save(token);
@@ -171,6 +160,60 @@ export class TokensService {
       completedTokens,
       totalRevenue,
       date: startOfDay.toISOString().split('T')[0],
+    };
+  }
+
+  private buildWhere(filters: {
+    outletId?: number;
+    status?: string;
+    chairId?: number;
+    userId?: number;
+    fromDate?: Date;
+    toDate?: Date;
+  }) {
+    const where: any = {};
+
+    if (filters.outletId) {
+      where.outletId = filters.outletId;
+    }
+
+    if (filters.status) {
+      where.status = filters.status;
+    }
+
+    if (filters.chairId) {
+      where.chairId = filters.chairId;
+    }
+
+    if (filters.userId) {
+      where.userId = filters.userId;
+    }
+
+    if (filters.fromDate && filters.toDate) {
+      where.createdAt = Between(filters.fromDate, filters.toDate);
+    } else if (filters.fromDate) {
+      where.createdAt = Between(filters.fromDate, new Date('9999-12-31T23:59:59.999Z'));
+    } else if (filters.toDate) {
+      where.createdAt = Between(new Date('1970-01-01T00:00:00.000Z'), filters.toDate);
+    }
+
+    return where;
+  }
+
+  private toListItem(token: Token): TokenListItemDto {
+    return {
+      id: token.id,
+      outletId: token.outletId,
+      outletName: token.outlet?.name ?? '',
+      chairId: token.chairId,
+      chairNumber: token.chair?.chairNumber ?? '',
+      userId: token.userId,
+      employeeName: token.user?.name ?? '',
+      employeeEmail: token.user?.email ?? '',
+      amount: Number(token.amount),
+      status: token.status,
+      createdAt: token.createdAt,
+      updatedAt: token.updatedAt,
     };
   }
 }

@@ -29,23 +29,11 @@ export class Token {
   @JoinColumn({ name: 'userId' })
   user: User;
 
-  @Column()
-  tokenNumber: string;
-
-  @Column({ nullable: true })
-  customerName: string;
-
   @Column({ type: 'decimal', precision: 10, scale: 2 })
   amount: number;
 
   @Column({ default: 'ACTIVE' })
-  status: string; // ACTIVE, COMPLETED, CANCELLED
-
-  @Column({ type: 'timestamp', nullable: true })
-  startTime: Date;
-
-  @Column({ type: 'timestamp', nullable: true })
-  endTime: Date;
+  status: string;
 
   @CreateDateColumn()
   createdAt: Date;

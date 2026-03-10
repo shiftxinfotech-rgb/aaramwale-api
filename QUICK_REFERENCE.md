@@ -81,7 +81,8 @@ POST /tokens
 Authorization: Bearer EMPLOYEE_TOKEN
 {
   "chairId": 1,
-  "customerName": "Customer Name"
+  "amount": 50,
+  "status": "ACTIVE"
 }
 ```
 
@@ -141,7 +142,7 @@ PORT=3000
 **users**: id, name, email, password, role, outletId
 **outlets**: id, name, address, city, phone
 **chairs**: id, outletId, chairNumber, rentPerToken
-**tokens**: id, outletId, chairId, userId, tokenNumber, customerName, amount, status
+**tokens**: id, outletId, chairId, userId, amount, status, createdAt, updatedAt
 
 ## Token Number Format
 ```
