@@ -7,6 +7,7 @@ import { CreateTokenDto } from './dto/create-token.dto';
 import { UpdateTokenDto } from './dto/update-token.dto';
 import { TokenListQueryDto } from './dto/token-list-query.dto';
 import { TokenListItemDto } from './dto/token-list-item.dto';
+import { TokenDateGroupDto } from './dto/token-date-group.dto';
 
 @Injectable()
 export class TokensService {
@@ -98,27 +99,21 @@ export class TokensService {
     return tokens.map((token) => this.toListItem(token));
   }
 
-  async findByOutlet(outletId: number): Promise<Token[]> {
-    return this.tokenRepository.find({
+  async findByOutlet(outletId: number): Promise<TokenListItemDto[]> {
+    const tokens = await this.tokenRepository.find({
       where: { outletId },
-      relations: ['chair', 'user'],
-      order: { createdAt: 'DESC' },
-    });
-  }
-
-  async findByDateRange(startDate: Date, endDate: Date, outletId?: number): Promise<Token[]> {
-    const where: any = {
-      createdAt: Between(startDate, endDate),
-    };
-
-    if (outletId) {
-      where.outletId = outletId;
-    }
-
-    return this.tokenRepository.find({
-      where,
       relations: ['outlet', 'chair', 'user'],
       order: { createdAt: 'DESC' },
+    });
+
+    return tokens.map((token) => this.toListItem(token));
+  }
+
+  async findByDateRange(startDate: Date, endDate: Date, outletId?: number): Promise<TokenListItemDto[]> {
+    return this.findAll({
+      outletId,
+      fromDate: startDate,
+      toDate: endDate,
     });
   }
 
@@ -161,6 +156,41 @@ export class TokensService {
       totalRevenue,
       date: startOfDay.toISOString().split('T')[0],
     };
+  }
+
+  async findDateWise(query: {
+    status?: string;
+    fromDate?: Date;
+    toDate?: Date;
+  }): Promise<TokenDateGroupDto[]> {
+    const tokens = await this.findAll({
+      status: query.status,
+      fromDate: query.fromDate,
+      toDate: query.toDate,
+    });
+
+    const grouped = new Map<string, TokenDateGroupDto>();
+
+    for (const token of tokens) {
+      const date = token.createdAt.toISOString().split('T')[0];
+      const existing = grouped.get(date);
+
+      if (existing) {
+        existing.tokens.push(token);
+        existing.totalTokens += 1;
+        existing.totalRevenue += Number(token.amount);
+        continue;
+      }
+
+      grouped.set(date, {
+        date,
+        totalTokens: 1,
+        totalRevenue: Number(token.amount),
+        tokens: [token],
+      });
+    }
+
+    return Array.from(grouped.values()).sort((a, b) => b.date.localeCompare(a.date));
   }
 
   private buildWhere(filters: {

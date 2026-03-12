@@ -2,6 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { TokenResponseDto } from './token-response.dto';
 import { TokenStatsDto } from './token-stats.dto';
 import { TokenListItemDto } from './token-list-item.dto';
+import { TokenDateGroupDto } from './token-date-group.dto';
 
 export class TokenItemApiResponseDto {
   @ApiProperty({ example: true })
@@ -46,6 +47,23 @@ export class TokenStatsApiResponseDto {
 
   @ApiProperty({ type: () => TokenStatsDto })
   data: TokenStatsDto;
+
+  @ApiProperty({ example: 200 })
+  statusCode: number;
+
+  @ApiProperty({ example: '2026-03-10T12:00:00.000Z' })
+  timestamp: string;
+}
+
+export class TokenDateWiseApiResponseDto {
+  @ApiProperty({ example: true })
+  success: boolean;
+
+  @ApiProperty({ example: 'Date-wise tokens retrieved successfully' })
+  message: string;
+
+  @ApiProperty({ type: () => TokenDateGroupDto, isArray: true })
+  data: TokenDateGroupDto[];
 
   @ApiProperty({ example: 200 })
   statusCode: number;

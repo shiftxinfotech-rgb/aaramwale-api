@@ -8,7 +8,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { GetUser } from '../auth/decorators/get-user.decorator';
 import { UserRole } from '../users/user.entity';
-import { EmptyApiResponseDto, ErrorApiResponseDto, TokenItemApiResponseDto, TokenListApiResponseDto, TokenStatsApiResponseDto } from './dto/token-api-response.dto';
+import { EmptyApiResponseDto, ErrorApiResponseDto, TokenDateWiseApiResponseDto, TokenItemApiResponseDto, TokenListApiResponseDto, TokenStatsApiResponseDto } from './dto/token-api-response.dto';
 import { TokenListQueryDto } from './dto/token-list-query.dto';
 
 @ApiTags('Tokens')
@@ -139,6 +139,26 @@ export class TokensController {
     );
     return {
       message: 'Tokens for date range retrieved successfully',
+      data,
+    };
+  }
+
+  @Get('date-wise')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Get all admin tokens grouped by date across all outlets and employees' })
+  @ApiQuery({ name: 'status', required: false, enum: ['ACTIVE', 'COMPLETED', 'CANCELLED'] })
+  @ApiQuery({ name: 'fromDate', required: false, type: String })
+  @ApiQuery({ name: 'toDate', required: false, type: String })
+  @ApiOkResponse({ description: 'Date-wise tokens retrieved successfully', type: TokenDateWiseApiResponseDto })
+  @ApiUnauthorizedResponse({ description: 'Unauthorized', type: ErrorApiResponseDto })
+  async findDateWise(@Query() query: TokenListQueryDto) {
+    const data = await this.tokensService.findDateWise({
+      status: query.status,
+      fromDate: query.fromDate ? new Date(`${query.fromDate}T00:00:00.000Z`) : undefined,
+      toDate: query.toDate ? new Date(`${query.toDate}T23:59:59.999Z`) : undefined,
+    });
+    return {
+      message: 'Date-wise tokens retrieved successfully',
       data,
     };
   }
