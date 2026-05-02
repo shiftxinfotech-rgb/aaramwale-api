@@ -11,7 +11,7 @@ export class EmployeeResponseDto {
     @ApiProperty({ example: 'John Doe' })
     fullName: string;
 
-    @ApiProperty({ example: 'john@example.com' })
+    @ApiProperty({ example: 'aaramwala.rajkot@gmail.com' })
     email: string;
 
     @ApiProperty({ example: '1234567890' })

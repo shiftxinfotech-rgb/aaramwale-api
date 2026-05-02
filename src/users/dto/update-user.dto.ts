@@ -8,7 +8,7 @@ export class UpdateUserDto {
   @IsOptional()
   name?: string;
 
-  @ApiProperty({ example: 'john@example.com', required: false })
+  @ApiProperty({ example: 'aaramwala.rajkot@gmail.com', required: false })
   @IsEmail()
   @IsOptional()
   email?: string;

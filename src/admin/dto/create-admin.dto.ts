@@ -7,7 +7,7 @@ export class CreateAdminDto {
     @IsNotEmpty()
     name: string;
 
-    @ApiProperty({ example: 'admin@example.com' })
+    @ApiProperty({ example: 'aaramwala.rajkot@gmail.com' })
     @IsEmail()
     @IsNotEmpty()
     email: string;

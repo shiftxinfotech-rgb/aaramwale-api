@@ -33,8 +33,8 @@ POST /auth/register
 ```bash
 POST /auth/login
 {
-  "email": "admin@example.com",
-  "password": "admin123"
+  "email": "aaramwala.rajkot@gmail.com",
+  "password": "password123"
 }
 # Save the accessToken!
 ```

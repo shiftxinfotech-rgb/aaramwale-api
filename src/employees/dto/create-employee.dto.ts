@@ -7,7 +7,7 @@ export class CreateEmployeeDto {
     @IsNotEmpty()
     name: string;
 
-    @ApiProperty({ example: 'john@example.com' })
+    @ApiProperty({ example: 'aaramwala.rajkot@gmail.com' })
     @IsEmail()
     @IsNotEmpty()
     email: string;
