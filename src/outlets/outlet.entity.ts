@@ -1,7 +1,7 @@
 import { Entity, PrimaryGeneratedColumn, Column, OneToMany, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 import { User } from '../users/user.entity';
-import { Chair } from '../chairs/chair.entity';
-import { Token } from '../tokens/token.entity';
+import { Asset } from '../assets/asset.entity';
+import { Pass } from '../passes/pass.entity';
 
 @Entity('outlets')
 export class Outlet {
@@ -23,11 +23,11 @@ export class Outlet {
   @OneToMany(() => User, (user) => user.outlet)
   users: User[];
 
-  @OneToMany(() => Chair, (chair) => chair.outlet)
-  chairs: Chair[];
+  @OneToMany(() => Asset, (asset) => asset.outlet)
+  assets: Asset[];
 
-  @OneToMany(() => Token, (token) => token.outlet)
-  tokens: Token[];
+  @OneToMany(() => Pass, (pass) => pass.outlet)
+  passes: Pass[];
 
   @CreateDateColumn()
   createdAt: Date;

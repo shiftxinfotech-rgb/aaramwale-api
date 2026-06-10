@@ -8,9 +8,12 @@ import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  // Set global prefix for all routes
+  app.setGlobalPrefix('api');
+
   // Enable CORS for mobile app and admin panel
   app.enableCors({
-    origin: true,
+    origin: ['https://admin.aaramwala.com', 'http://admin.aaramwala.com', 'http://localhost:3000', 'http://localhost:3001'],
     credentials: true,
   });
 
@@ -30,7 +33,7 @@ async function bootstrap() {
   // Swagger API Documentation
   const config = new DocumentBuilder()
     .setTitle('AaramWale API')
-    .setDescription('Multi-outlet massage chair rental and outlet-scoped token management API')
+    .setDescription('Multi-outlet asset rental and pass management API')
     .setVersion('1.1')
     .addBearerAuth(
       {
@@ -45,8 +48,10 @@ async function bootstrap() {
     .addTag('Admin', 'Admin management')
     .addTag('Employees', 'Employee management')
     .addTag('Outlets', 'Outlet management')
-    .addTag('Chairs', 'Chair management')
-    .addTag('Tokens', 'Outlet-scoped token generation and reporting')
+    .addTag('Categories', 'Category management')
+    .addTag('Assets', 'Asset management')
+    .addTag('Passes', 'Customer pass generation and management')
+    .addTag('Reports', 'Admin reporting and analytics')
     .addTag('Customers', 'Customer management')
     .build();
 

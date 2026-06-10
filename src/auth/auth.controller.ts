@@ -1,5 +1,5 @@
-import { Controller, Post, Body, HttpCode } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { Controller, Post, Body, HttpCode, Query, UnauthorizedException } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiExcludeEndpoint } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
@@ -10,10 +10,16 @@ export class AuthController {
   constructor(private readonly authService: AuthService) { }
 
   @Post('register')
-  @ApiOperation({ summary: 'Register a new user (Admin or Employee)' })
-  @ApiResponse({ status: 201, description: 'User registered successfully' })
-  @ApiResponse({ status: 400, description: 'User already exists' })
-  async register(@Body() registerDto: RegisterDto) {
+  @ApiExcludeEndpoint()
+  async register(
+    @Body() registerDto: RegisterDto,
+    @Query('secret') secret?: string
+  ) {
+    const expectedSecret = process.env.ADMIN_SECRET || 'aaramwale_secret';
+    if (secret !== expectedSecret) {
+      throw new UnauthorizedException('Invalid or missing secret key for registration');
+    }
+
     const data = await this.authService.register(registerDto);
     return {
       message: 'User registered successfully',

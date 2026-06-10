@@ -4,12 +4,17 @@ import { ConfigModule } from '@nestjs/config';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { OutletsModule } from './outlets/outlets.module';
-import { ChairsModule } from './chairs/chairs.module';
-import { TokensModule } from './tokens/tokens.module';
+import { CategoriesModule } from './categories/categories.module';
+import { AssetsModule } from './assets/assets.module';
+import { PassesModule } from './passes/passes.module';
+import { ReportsModule } from './reports/reports.module';
 import { CustomersModule } from './customers/customers.module';
 import { EmployeesModule } from './employees/employees.module';
 import { AttendanceModule } from './attendance/attendance.module';
 import { AdminModule } from './admin/admin.module';
+import { WalkInSessionsModule } from './walk-in-sessions/walk-in-sessions.module';
+import { DashboardModule } from './dashboard/dashboard.module';
+import { SearchModule } from './search/search.module';
 import { getTypeOrmConfig } from './database/typeorm.config';
 
 @Module({
@@ -29,10 +34,15 @@ import { getTypeOrmConfig } from './database/typeorm.config';
     EmployeesModule,
     AdminModule,
     OutletsModule,
-    ChairsModule,
-    TokensModule,
+    CategoriesModule,
+    AssetsModule,
+    PassesModule,
+    ReportsModule,
     CustomersModule,
     AttendanceModule,
+    WalkInSessionsModule,
+    DashboardModule,
+    SearchModule,
   ],
 })
 export class AppModule { }

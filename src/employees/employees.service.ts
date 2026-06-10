@@ -5,6 +5,7 @@ import { User, UserRole } from '../users/user.entity';
 import { Attendance } from '../attendance/attendance.entity';
 import { CreateEmployeeDto } from './dto/create-employee.dto';
 import { UpdateEmployeeDto } from './dto/update-employee.dto';
+import { EmployeeListQueryDto } from './dto/employee-list-query.dto';
 
 @Injectable()
 export class EmployeesService {
@@ -18,6 +19,10 @@ export class EmployeesService {
     // Helper: attach attendance status to employees
     private async attachAttendanceStatus(employees: User[]): Promise<any[]> {
         const employeeIds = employees.map(e => e.id);
+
+        if (employeeIds.length === 0) {
+            return [];
+        }
 
         // Get all active attendance sessions for these employees in one query
         const activeSessions = await this.attendanceRepository.find({
@@ -65,14 +70,59 @@ export class EmployeesService {
         return result as User;
     }
 
-    async findAll(): Promise<any[]> {
-        const employees = await this.userRepository.find({
-            where: { role: UserRole.EMPLOYEE },
-            relations: ['outlet'],
-            order: { createdAt: 'DESC' },
-        });
+    async findAll(query: EmployeeListQueryDto): Promise<any> {
+        const { page = 1, limit = 10, search, sortBy = 'createdAt', sortOrder = 'DESC', status, outletId, role } = query;
 
-        return this.attachAttendanceStatus(employees);
+        const queryBuilder = this.userRepository.createQueryBuilder('user')
+            .leftJoinAndSelect('user.outlet', 'outlet');
+
+        if (role) {
+            queryBuilder.andWhere('user.role = :role', { role });
+        } else {
+            queryBuilder.andWhere('user.role = :role', { role: UserRole.EMPLOYEE });
+        }
+
+        if (outletId) {
+            queryBuilder.andWhere('user.outletId = :outletId', { outletId });
+        }
+
+        if (status) {
+            const isActive = status === 'ACTIVE';
+            queryBuilder.andWhere('user.isActive = :isActive', { isActive });
+        }
+
+        if (search) {
+            queryBuilder.andWhere(
+                '(user.name ILIKE :search OR user.email ILIKE :search)',
+                { search: `%${search}%` }
+            );
+        }
+
+        const allowedSortFields = ['id', 'name', 'email', 'role', 'isActive', 'createdAt'];
+        const sortField = allowedSortFields.includes(sortBy) ? sortBy : 'createdAt';
+        const order = sortOrder === 'ASC' ? 'ASC' : 'DESC';
+
+        queryBuilder.orderBy(`user.${sortField}`, order);
+
+        const totalRecords = await queryBuilder.getCount();
+
+        queryBuilder.skip((page - 1) * limit).take(limit);
+
+        const employees = await queryBuilder.getMany();
+        const enrichedEmployees = await this.attachAttendanceStatus(employees);
+        const totalPages = Math.ceil(totalRecords / limit);
+
+        return {
+            data: enrichedEmployees,
+            meta: {
+                page,
+                limit,
+                totalRecords,
+                totalPages,
+                hasNextPage: page < totalPages,
+                hasPreviousPage: page > 1,
+            },
+        };
     }
 
     async findByOutlet(outletId: number): Promise<any[]> {

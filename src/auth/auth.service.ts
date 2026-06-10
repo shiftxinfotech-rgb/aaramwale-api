@@ -2,6 +2,7 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
+import * as bcrypt from 'bcrypt';
 import { User } from '../users/user.entity';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
@@ -62,7 +63,14 @@ export class AuthService {
     }
 
     // Verify password
-    if (password !== user.password) {
+    let isPasswordValid = false;
+    if (user.password.startsWith('$2b$') || user.password.startsWith('$2a$')) {
+      isPasswordValid = await bcrypt.compare(password, user.password);
+    } else {
+      isPasswordValid = (password === user.password);
+    }
+
+    if (!isPasswordValid) {
       throw new UnauthorizedException('Invalid credentials');
     }
 

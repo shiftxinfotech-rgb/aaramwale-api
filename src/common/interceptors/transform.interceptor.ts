@@ -22,8 +22,9 @@ export class TransformInterceptor<T>
             map((data) => {
                 // Check if data is already wrapped (e.g., from a service that wasn't refactored yet)
                 const isPreWrapped = data && typeof data === 'object' && 'success' in data && 'data' in data;
+                const isPaginated = data && typeof data === 'object' && 'data' in data && 'meta' in data && !('success' in data);
 
-                const finalData = isPreWrapped ? data.data : (data?.data !== undefined ? data.data : data);
+                const finalData = isPaginated ? data : (isPreWrapped ? data.data : (data?.data !== undefined ? data.data : data));
                 const finalMessage = isPreWrapped ? data.message : (data?.message || 'Operation successful');
 
                 return {

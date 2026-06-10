@@ -1,8 +1,10 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, OneToMany, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, OneToMany, CreateDateColumn, UpdateDateColumn, BeforeInsert, BeforeUpdate } from 'typeorm';
 import { Outlet } from '../outlets/outlet.entity';
-import { Token } from '../tokens/token.entity';
+import { Pass } from '../passes/pass.entity';
+import * as bcrypt from 'bcrypt';
 
 export enum UserRole {
+  SUPER_ADMIN = 'SUPER_ADMIN',
   ADMIN = 'ADMIN',
   EMPLOYEE = 'EMPLOYEE',
 }
@@ -35,8 +37,8 @@ export class User {
   @JoinColumn({ name: 'outletId' })
   outlet: Outlet;
 
-  @OneToMany(() => Token, (token) => token.user)
-  tokens: Token[];
+  @OneToMany(() => Pass, (pass) => pass.generatedByUser)
+  passes: Pass[];
 
   @Column({ default: true })
   isActive: boolean;
@@ -46,4 +48,13 @@ export class User {
 
   @UpdateDateColumn()
   updatedAt: Date;
+
+  @BeforeInsert()
+  @BeforeUpdate()
+  async hashPassword() {
+    if (this.password && !this.password.startsWith('$2b$')) {
+      const salt = await bcrypt.genSalt(10);
+      this.password = await bcrypt.hash(this.password, salt);
+    }
+  }
 }

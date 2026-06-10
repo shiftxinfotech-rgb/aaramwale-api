@@ -16,8 +16,8 @@ export class AdminController {
     constructor(private readonly adminService: AdminService) { }
 
     @Post()
-    @Roles(UserRole.ADMIN)
-    @ApiOperation({ summary: 'Create a new admin (Admin only)' })
+    @Roles(UserRole.SUPER_ADMIN)
+    @ApiOperation({ summary: 'Create a new admin (Super Admin only)' })
     @SwaggerApiResponse({ status: 201, description: 'Admin created successfully' })
     @SwaggerApiResponse({ status: 403, description: 'Forbidden' })
     async create(@Body() createAdminDto: CreateAdminDto) {
@@ -29,8 +29,8 @@ export class AdminController {
     }
 
     @Get()
-    @Roles(UserRole.ADMIN)
-    @ApiOperation({ summary: 'Get all admins (Admin only)' })
+    @Roles(UserRole.SUPER_ADMIN)
+    @ApiOperation({ summary: 'Get all admins (Super Admin only)' })
     @SwaggerApiResponse({ status: 200, description: 'List of all admins' })
     async findAll() {
         const data = await this.adminService.findAll();
@@ -41,8 +41,8 @@ export class AdminController {
     }
 
     @Get(':id')
-    @Roles(UserRole.ADMIN)
-    @ApiOperation({ summary: 'Get an admin by ID (Admin only)' })
+    @Roles(UserRole.SUPER_ADMIN)
+    @ApiOperation({ summary: 'Get an admin by ID (Super Admin only)' })
     @SwaggerApiResponse({ status: 200, description: 'Admin details' })
     @SwaggerApiResponse({ status: 404, description: 'Admin not found' })
     async findOne(@Param('id') id: string) {
@@ -54,8 +54,8 @@ export class AdminController {
     }
 
     @Patch(':id')
-    @Roles(UserRole.ADMIN)
-    @ApiOperation({ summary: 'Update an admin (Admin only)' })
+    @Roles(UserRole.SUPER_ADMIN)
+    @ApiOperation({ summary: 'Update an admin (Super Admin only)' })
     @SwaggerApiResponse({ status: 200, description: 'Admin updated successfully' })
     @SwaggerApiResponse({ status: 404, description: 'Admin not found' })
     async update(@Param('id') id: string, @Body() updateAdminDto: UpdateAdminDto) {
@@ -67,8 +67,8 @@ export class AdminController {
     }
 
     @Delete(':id')
-    @Roles(UserRole.ADMIN)
-    @ApiOperation({ summary: 'Delete an admin (Admin only)' })
+    @Roles(UserRole.SUPER_ADMIN)
+    @ApiOperation({ summary: 'Delete an admin (Super Admin only)' })
     @SwaggerApiResponse({ status: 200, description: 'Admin deleted successfully' })
     @SwaggerApiResponse({ status: 404, description: 'Admin not found' })
     async remove(@Param('id') id: string) {
