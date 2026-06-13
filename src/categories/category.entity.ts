@@ -1,7 +1,14 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToMany, CreateDateColumn, UpdateDateColumn } from 'typeorm';
-import { Asset } from '../assets/asset.entity';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  OneToMany,
+  CreateDateColumn,
+  UpdateDateColumn,
+} from "typeorm";
+import { Asset } from "../assets/asset.entity";
 
-@Entity('categories')
+@Entity("categories")
 export class Category {
   @PrimaryGeneratedColumn()
   id: number;

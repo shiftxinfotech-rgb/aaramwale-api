@@ -1,9 +1,13 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { User } from './user.entity';
-import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+import { User } from "./user.entity";
+import { CreateUserDto } from "./dto/create-user.dto";
+import { UpdateUserDto } from "./dto/update-user.dto";
 
 @Injectable()
 export class UsersService {
@@ -21,7 +25,7 @@ export class UsersService {
     });
 
     if (existingUser) {
-      throw new BadRequestException('User with this email already exists');
+      throw new BadRequestException("User with this email already exists");
     }
 
     // Create user
@@ -36,15 +40,15 @@ export class UsersService {
 
   async findAll(): Promise<User[]> {
     return this.userRepository.find({
-      relations: ['outlet'],
-      order: { createdAt: 'DESC' },
+      relations: ["outlet"],
+      order: { createdAt: "DESC" },
     });
   }
 
   async findOne(id: number): Promise<User> {
     const user = await this.userRepository.findOne({
       where: { id },
-      relations: ['outlet'],
+      relations: ["outlet"],
     });
 
     if (!user) {
@@ -57,8 +61,8 @@ export class UsersService {
   async findByOutlet(outletId: number): Promise<User[]> {
     return this.userRepository.find({
       where: { outletId },
-      relations: ['outlet'],
-      order: { createdAt: 'DESC' },
+      relations: ["outlet"],
+      order: { createdAt: "DESC" },
     });
   }
 

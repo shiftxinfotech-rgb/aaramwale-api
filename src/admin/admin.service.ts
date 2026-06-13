@@ -1,89 +1,108 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { User, UserRole } from '../users/user.entity';
-import { CreateAdminDto } from './dto/create-admin.dto';
-import { UpdateAdminDto } from './dto/update-admin.dto';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+import { User, UserRole } from "../users/user.entity";
+import { CreateAdminDto } from "./dto/create-admin.dto";
+import { UpdateAdminDto } from "./dto/update-admin.dto";
 
 @Injectable()
 export class AdminService {
-    constructor(
-        @InjectRepository(User)
-        private userRepository: Repository<User>,
-    ) { }
+  constructor(
+    @InjectRepository(User)
+    private userRepository: Repository<User>,
+  ) {}
 
-    async create(createAdminDto: CreateAdminDto): Promise<User> {
-        const { email, password, ...rest } = createAdminDto;
+  /** Remove sensitive/internal fields before returning */
+  private sanitize(user: User): Record<string, any> {
+    const obj = { ...user } as any;
+    delete obj.password;
+    delete obj.hashPassword;
+    return obj;
+  }
 
-        const existingUser = await this.userRepository.findOne({
-            where: { email },
-        });
+  async create(createAdminDto: CreateAdminDto): Promise<Record<string, any>> {
+    const { email, password, name, mobile, isActive } = createAdminDto;
+    // NOTE: 'role' and 'outletId' from the DTO are intentionally ignored.
+    // role is always forced to ADMIN; outletId is always null for admins.
 
-        if (existingUser) {
-            throw new BadRequestException('User with this email already exists');
-        }
-
-        const admin = this.userRepository.create({
-            ...rest,
-            email,
-            password,
-            role: UserRole.ADMIN,
-        });
-
-        const savedAdmin = await this.userRepository.save(admin);
-        const { password: _, ...result } = savedAdmin;
-
-        return result as User;
+    const existingUser = await this.userRepository.findOne({
+      where: { email },
+    });
+    if (existingUser) {
+      throw new BadRequestException("User with this email already exists");
     }
 
-    async findAll(): Promise<User[]> {
-        return await this.userRepository.find({
-            where: { role: UserRole.ADMIN },
-            order: { createdAt: 'DESC' },
-        });
+    // The User entity's @BeforeInsert hook will hash the password automatically.
+    const admin = this.userRepository.create({
+      name,
+      email,
+      password,
+      ...(mobile ? { mobile } : {}),
+      isActive: isActive !== undefined ? isActive : true,
+      role: UserRole.ADMIN,
+      outletId: null,
+    });
+
+    const savedAdmin = await this.userRepository.save(admin);
+    return this.sanitize(savedAdmin);
+  }
+
+  async findAll(): Promise<Record<string, any>[]> {
+    const admins = await this.userRepository.find({
+      where: { role: UserRole.ADMIN },
+      order: { createdAt: "DESC" },
+    });
+    return admins.map((a) => this.sanitize(a));
+  }
+
+  async findOne(id: number): Promise<Record<string, any>> {
+    const admin = await this.userRepository.findOne({
+      where: { id, role: UserRole.ADMIN },
+    });
+
+    if (!admin) {
+      throw new NotFoundException(`Admin with ID ${id} not found`);
     }
 
-    async findOne(id: number): Promise<User> {
-        const admin = await this.userRepository.findOne({
-            where: { id, role: UserRole.ADMIN },
-        });
+    return this.sanitize(admin);
+  }
 
-        if (!admin) {
-            throw new NotFoundException(`Admin with ID ${id} not found`);
-        }
+  async update(
+    id: number,
+    updateAdminDto: UpdateAdminDto,
+  ): Promise<Record<string, any>> {
+    const admin = await this.userRepository.findOne({
+      where: { id, role: UserRole.ADMIN },
+    });
 
-        return admin;
+    if (!admin) {
+      throw new NotFoundException(`Admin with ID ${id} not found`);
     }
 
-    async update(id: number, updateAdminDto: UpdateAdminDto): Promise<User> {
-        const admin = await this.userRepository.findOne({
-            where: { id, role: UserRole.ADMIN },
-        });
+    // Merge updates — the @BeforeUpdate hook will re-hash password if changed
+    Object.assign(admin, {
+      ...updateAdminDto,
+      role: UserRole.ADMIN, // enforce role
+      outletId: null, // enforce no outlet
+    });
 
-        if (!admin) {
-            throw new NotFoundException(`Admin with ID ${id} not found`);
-        }
+    const saved = await this.userRepository.save(admin);
+    return this.sanitize(saved);
+  }
 
-        Object.assign(admin, updateAdminDto);
-        await this.userRepository.save(admin);
+  async remove(id: number): Promise<void> {
+    const admin = await this.userRepository.findOne({
+      where: { id, role: UserRole.ADMIN },
+    });
 
-        const updatedAdmin = await this.userRepository.findOne({ where: { id } });
-        if (!updatedAdmin) {
-            throw new NotFoundException(`Admin with ID ${id} not found`);
-        }
-
-        return updatedAdmin;
+    if (!admin) {
+      throw new NotFoundException(`Admin with ID ${id} not found`);
     }
 
-    async remove(id: number): Promise<void> {
-        const admin = await this.userRepository.findOne({
-            where: { id, role: UserRole.ADMIN },
-        });
-
-        if (!admin) {
-            throw new NotFoundException(`Admin with ID ${id} not found`);
-        }
-
-        await this.userRepository.remove(admin);
-    }
+    await this.userRepository.remove(admin);
+  }
 }

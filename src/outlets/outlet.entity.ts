@@ -1,9 +1,16 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToMany, CreateDateColumn, UpdateDateColumn } from 'typeorm';
-import { User } from '../users/user.entity';
-import { Asset } from '../assets/asset.entity';
-import { Pass } from '../passes/pass.entity';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  OneToMany,
+  CreateDateColumn,
+  UpdateDateColumn,
+} from "typeorm";
+import { User } from "../users/user.entity";
+import { Asset } from "../assets/asset.entity";
+import { Pass } from "../passes/pass.entity";
 
-@Entity('outlets')
+@Entity("outlets")
 export class Outlet {
   @PrimaryGeneratedColumn()
   id: number;

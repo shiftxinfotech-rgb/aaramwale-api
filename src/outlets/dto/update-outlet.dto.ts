@@ -1,18 +1,18 @@
-import { IsString, IsOptional, IsBoolean } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import { IsString, IsOptional, IsBoolean } from "class-validator";
+import { ApiProperty } from "@nestjs/swagger";
 
 export class UpdateOutletDto {
-  @ApiProperty({ example: 'Downtown Branch', required: false })
+  @ApiProperty({ example: "Downtown Branch", required: false })
   @IsString()
   @IsOptional()
   name?: string;
 
-  @ApiProperty({ example: '123 Main Street, Floor 2', required: false })
+  @ApiProperty({ example: "123 Main Street, Floor 2", required: false })
   @IsString()
   @IsOptional()
   address?: string;
 
-  @ApiProperty({ example: 'Mumbai', required: false })
+  @ApiProperty({ example: "Mumbai", required: false })
   @IsString()
   @IsOptional()
   city?: string;

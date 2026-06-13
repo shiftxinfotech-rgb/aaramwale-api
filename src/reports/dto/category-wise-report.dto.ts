@@ -1,15 +1,15 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty } from "@nestjs/swagger";
 
 export class CategoryWiseReportDto {
   @ApiProperty({ example: 1 })
   categoryId: number;
 
-  @ApiProperty({ example: 'Massage Chair' })
+  @ApiProperty({ example: "Massage Chair" })
   categoryName: string;
 
   @ApiProperty({ example: 12 })
   totalPasses: number;
 
-  @ApiProperty({ example: 1200.00 })
+  @ApiProperty({ example: 1200.0 })
   totalRevenue: number;
 }

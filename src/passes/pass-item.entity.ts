@@ -1,9 +1,17 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
-import { Pass } from './pass.entity';
-import { Asset } from '../assets/asset.entity';
-import { Category } from '../categories/category.entity';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  JoinColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+} from "typeorm";
+import { Pass } from "./pass.entity";
+import { Asset } from "../assets/asset.entity";
+import { Category } from "../categories/category.entity";
 
-@Entity('pass_items')
+@Entity("pass_items")
 export class PassItem {
   @PrimaryGeneratedColumn()
   id: number;
@@ -11,22 +19,22 @@ export class PassItem {
   @Column()
   passId: number;
 
-  @ManyToOne(() => Pass, (pass) => pass.items, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'passId' })
+  @ManyToOne(() => Pass, (pass) => pass.items, { onDelete: "CASCADE" })
+  @JoinColumn({ name: "passId" })
   pass: Pass;
 
   @Column()
   categoryId: number;
 
-  @ManyToOne(() => Category, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'categoryId' })
+  @ManyToOne(() => Category, { onDelete: "CASCADE" })
+  @JoinColumn({ name: "categoryId" })
   category: Category;
 
   @Column()
   assetId: number;
 
-  @ManyToOne(() => Asset, (asset) => asset.passItems, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'assetId' })
+  @ManyToOne(() => Asset, (asset) => asset.passItems, { onDelete: "CASCADE" })
+  @JoinColumn({ name: "assetId" })
   asset: Asset;
 
   @Column()
@@ -38,10 +46,10 @@ export class PassItem {
   @Column()
   paidQuantity: number;
 
-  @Column({ type: 'decimal', precision: 10, scale: 2 })
+  @Column({ type: "decimal", precision: 10, scale: 2 })
   unitPrice: number;
 
-  @Column({ type: 'decimal', precision: 10, scale: 2 })
+  @Column({ type: "decimal", precision: 10, scale: 2 })
   lineTotal: number;
 
   @CreateDateColumn()

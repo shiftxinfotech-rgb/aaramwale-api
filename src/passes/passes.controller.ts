@@ -1,64 +1,126 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Query, ForbiddenException } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
-import { PassesService } from './passes.service';
-import { CreatePassDto } from './dto/create-pass.dto';
-import { UpdatePassDto } from './dto/update-pass.dto';
-import { PassResponseDto } from './dto/pass-response.dto';
-import { PassListQueryDto } from './dto/pass-list-query.dto';
-import { PassStatsResponseDto } from './dto/pass-stats-response.dto';
-import { PassDateGroupDto } from './dto/pass-date-group.dto';
-import { RedeemPassDto } from './dto/redeem-pass.dto';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
-import { GetUser } from '../auth/decorators/get-user.decorator';
-import { UserRole } from '../users/user.entity';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UseGuards,
+  Query,
+  ForbiddenException,
+} from "@nestjs/common";
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+  ApiParam,
+  ApiQuery,
+} from "@nestjs/swagger";
+import { PassesService } from "./passes.service";
+import { CreatePassDto } from "./dto/create-pass.dto";
+import { UpdatePassDto } from "./dto/update-pass.dto";
+import { PassResponseDto } from "./dto/pass-response.dto";
+import { PassListQueryDto } from "./dto/pass-list-query.dto";
+import { PassStatsResponseDto } from "./dto/pass-stats-response.dto";
+import { PassDateGroupDto } from "./dto/pass-date-group.dto";
+import { RedeemPassDto } from "./dto/redeem-pass.dto";
+import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
+import { RolesGuard } from "../auth/guards/roles.guard";
+import { Roles } from "../auth/decorators/roles.decorator";
+import { GetUser } from "../auth/decorators/get-user.decorator";
+import { UserRole } from "../users/user.entity";
 
-@ApiTags('Passes')
-@ApiBearerAuth('access-token')
-@Controller('passes')
+@ApiTags("Passes")
+@ApiBearerAuth("access-token")
+@Controller("passes")
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class PassesController {
   constructor(private readonly passesService: PassesService) {}
 
+  // ─── CREATE ──────────────────────────────────────────────────────────────────
+
   @Post()
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.EMPLOYEE)
-  @ApiOperation({ summary: 'Automatically generate a multi-item pass (Login required)' })
-  @ApiResponse({ status: 201, description: 'Pass created successfully', type: PassResponseDto })
-  @ApiResponse({ status: 400, description: 'Asset inactive, belongs to different outlet, or invalid discount/quantities' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @Roles(UserRole.ADMIN, UserRole.EMPLOYEE)
+  @ApiOperation({
+    summary: "Generate a new pass for a customer",
+    description: `**Role:** ADMIN / EMPLOYEE\n\nCreates a multi-item pass for a customer. Assets in the pass **must belong to the customer's outlet**. EMPLOYEE passes are automatically scoped to their outlet.`,
+  })
+  @ApiResponse({
+    status: 201,
+    description: "Pass created successfully",
+    type: PassResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description:
+      "Asset inactive, belongs to a different outlet, or invalid quantities",
+  })
+  @ApiResponse({ status: 401, description: "Missing or invalid Bearer token" })
+  @ApiResponse({ status: 403, description: "Forbidden" })
   async create(@Body() createPassDto: CreatePassDto, @GetUser() user: any) {
-    const filterOutletId = user.role === UserRole.EMPLOYEE ? user.outletId : undefined;
-    const data = await this.passesService.create(createPassDto, user.userId, user.role, filterOutletId);
+    const filterOutletId =
+      user.role === UserRole.EMPLOYEE ? user.outletId : undefined;
+    const data = await this.passesService.create(
+      createPassDto,
+      user.userId,
+      user.role,
+      filterOutletId,
+    );
     return {
-      message: 'Pass created successfully',
+      message: "Pass created successfully",
       data,
     };
   }
 
-  @Get('search')
+  // ─── SEARCH ───────────────────────────────────────────────────────────────────
+
+  @Get("search")
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.EMPLOYEE)
-  @ApiOperation({ summary: 'Search passes by pass number, customer name, or customer mobile (for redemption workflow)' })
-  @ApiQuery({ name: 'q', required: true, description: 'Pass number, customer name, or mobile' })
-  @ApiResponse({ status: 200, description: 'Matching passes' })
-  async search(@Query('q') q: string, @GetUser() user: any) {
-    const filterOutletId = user.role === UserRole.EMPLOYEE ? user.outletId : undefined;
+  @ApiOperation({
+    summary: "Search passes by pass number, customer name, or mobile",
+    description:
+      "**Role:** All authenticated roles\n\nOptimised for the redemption workflow — quickly look up a pass by number or customer.",
+  })
+  @ApiQuery({
+    name: "q",
+    required: true,
+    example: "PASS-001",
+    description: "Pass number, customer name, or mobile",
+  })
+  @ApiResponse({ status: 200, description: "Matching passes" })
+  @ApiResponse({ status: 401, description: "Missing or invalid Bearer token" })
+  async search(@Query("q") q: string, @GetUser() user: any) {
+    const filterOutletId =
+      user.role === UserRole.EMPLOYEE ? user.outletId : undefined;
     const data = await this.passesService.search(q, filterOutletId);
     return {
-      message: 'Pass search results',
+      message: "Pass search results",
       data,
     };
   }
+
+  // ─── LIST ─────────────────────────────────────────────────────────────────────
 
   @Get()
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.EMPLOYEE)
-  @ApiOperation({ summary: 'Get all passes with pagination, search, filters, and sorting' })
-  @ApiResponse({ status: 200, description: 'Paginated list of passes' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiOperation({
+    summary: "List all passes with pagination, search and filters",
+    description:
+      "**Role:** All authenticated roles\n\nEMPLOYEE results are scoped to their outlet. Supports \`page\`, \`limit\`, \`search\`, \`outletId\`, \`employeeId\`, \`status\`, \`fromDate\`, \`toDate\`.",
+  })
+  @ApiResponse({
+    status: 200,
+    description: "Paginated pass list",
+    type: [PassResponseDto],
+  })
+  @ApiResponse({ status: 401, description: "Missing or invalid Bearer token" })
   async findAll(@Query() query: PassListQueryDto, @GetUser() user: any) {
-    const filterOutletId = user.role === UserRole.EMPLOYEE ? user.outletId : query.outletId;
-    const filterEmployeeId = user.role === UserRole.EMPLOYEE ? undefined : query.employeeId;
-
+    const filterOutletId =
+      user.role === UserRole.EMPLOYEE ? user.outletId : query.outletId;
+    const filterEmployeeId =
+      user.role === UserRole.EMPLOYEE ? undefined : query.employeeId;
     const data = await this.passesService.findAll({
       ...query,
       outletId: filterOutletId,
@@ -66,16 +128,30 @@ export class PassesController {
       paginated: true,
     });
     return {
-      message: 'Passes retrieved successfully',
+      message: "Passes retrieved successfully",
       data,
     };
   }
 
-  @Get('my-passes')
+  // ─── MY PASSES ────────────────────────────────────────────────────────────────
+
+  @Get("my-passes")
   @Roles(UserRole.EMPLOYEE)
-  @ApiOperation({ summary: 'Get passes generated by the logged-in employee with pagination, filters, and sorting' })
-  @ApiResponse({ status: 200, description: 'Paginated list of employee passes' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiOperation({
+    summary: "Get the logged-in employee's own passes",
+    description:
+      "**Role:** EMPLOYEE only\n\nReturns passes generated by the currently authenticated employee for their outlet.",
+  })
+  @ApiResponse({
+    status: 200,
+    description: "Paginated list of employee passes",
+    type: [PassResponseDto],
+  })
+  @ApiResponse({ status: 401, description: "Missing or invalid Bearer token" })
+  @ApiResponse({
+    status: 403,
+    description: "Forbidden — EMPLOYEE role required",
+  })
   async findMyPasses(@Query() query: PassListQueryDto, @GetUser() user: any) {
     const data = await this.passesService.findAll({
       ...query,
@@ -84,19 +160,42 @@ export class PassesController {
       paginated: true,
     });
     return {
-      message: 'My passes retrieved successfully',
+      message: "My passes retrieved successfully",
       data,
     };
   }
 
-  @Get('stats/today')
+  // ─── TODAY STATS ──────────────────────────────────────────────────────────────
+
+  @Get("stats/today")
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.EMPLOYEE)
-  @ApiOperation({ summary: "Get today's pass statistics" })
-  @ApiQuery({ name: 'outletId', required: false, type: Number })
-  @ApiResponse({ status: 200, description: "Today's statistics", type: PassStatsResponseDto })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async getTodayStats(@Query('outletId') outletId?: string, @GetUser() user?: any) {
-    const filterOutletId = user.role === UserRole.EMPLOYEE ? user.outletId : (outletId ? +outletId : undefined);
+  @ApiOperation({
+    summary: "Get today's pass statistics",
+    description:
+      "**Role:** All authenticated roles\n\nReturns count of passes generated and total revenue for today.",
+  })
+  @ApiQuery({
+    name: "outletId",
+    required: false,
+    type: Number,
+    description: "Filter by outlet (EMPLOYEE is always auto-scoped)",
+  })
+  @ApiResponse({
+    status: 200,
+    description: "Today's statistics",
+    type: PassStatsResponseDto,
+  })
+  @ApiResponse({ status: 401, description: "Missing or invalid Bearer token" })
+  async getTodayStats(
+    @Query("outletId") outletId?: string,
+    @GetUser() user?: any,
+  ) {
+    const filterOutletId =
+      user.role === UserRole.EMPLOYEE
+        ? user.outletId
+        : outletId
+          ? +outletId
+          : undefined;
     const data = await this.passesService.getTodayStats(filterOutletId);
     return {
       message: "Today's statistics retrieved successfully",
@@ -104,49 +203,121 @@ export class PassesController {
     };
   }
 
-  @Get('customer/:customerId')
+  // ─── BY CUSTOMER ──────────────────────────────────────────────────────────────
+
+  @Get("customer/:customerId")
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.EMPLOYEE)
-  @ApiOperation({ summary: 'Get passes by customer ID' })
-  @ApiResponse({ status: 200, description: 'List of customer passes', type: [PassResponseDto] })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async findByCustomer(@Param('customerId') customerId: string, @GetUser() user: any) {
-    const filterOutletId = user.role === UserRole.EMPLOYEE ? user.outletId : undefined;
-    const data = await this.passesService.findByCustomer(+customerId, filterOutletId);
+  @ApiOperation({
+    summary: "Get all passes for a customer",
+    description: "**Role:** All authenticated roles",
+  })
+  @ApiParam({
+    name: "customerId",
+    type: Number,
+    example: 11,
+    description: "Customer ID",
+  })
+  @ApiResponse({
+    status: 200,
+    description: "Customer pass list",
+    type: [PassResponseDto],
+  })
+  @ApiResponse({ status: 401, description: "Missing or invalid Bearer token" })
+  async findByCustomer(
+    @Param("customerId") customerId: string,
+    @GetUser() user: any,
+  ) {
+    const filterOutletId =
+      user.role === UserRole.EMPLOYEE ? user.outletId : undefined;
+    const data = await this.passesService.findByCustomer(
+      +customerId,
+      filterOutletId,
+    );
     return {
-      message: 'Passes for customer retrieved successfully',
+      message: "Passes for customer retrieved successfully",
       data,
     };
   }
 
-  @Get('outlet/:outletId')
+  // ─── BY OUTLET ────────────────────────────────────────────────────────────────
+
+  @Get("outlet/:outletId")
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.EMPLOYEE)
-  @ApiOperation({ summary: 'Get passes by outlet ID' })
-  @ApiResponse({ status: 200, description: 'List of outlet passes', type: [PassResponseDto] })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 403, description: 'Forbidden' })
-  async findByOutlet(@Param('outletId') outletId: string, @GetUser() user: any) {
+  @ApiOperation({
+    summary: "Get all passes for an outlet",
+    description:
+      "**Role:** All authenticated roles\n\nEMPLOYEE can only view passes for their own outlet.",
+  })
+  @ApiParam({
+    name: "outletId",
+    type: Number,
+    example: 1,
+    description: "Outlet ID",
+  })
+  @ApiResponse({
+    status: 200,
+    description: "Outlet pass list",
+    type: [PassResponseDto],
+  })
+  @ApiResponse({ status: 401, description: "Missing or invalid Bearer token" })
+  @ApiResponse({
+    status: 403,
+    description: "Forbidden — EMPLOYEE cannot view other outlets",
+  })
+  async findByOutlet(
+    @Param("outletId") outletId: string,
+    @GetUser() user: any,
+  ) {
     if (user.role === UserRole.EMPLOYEE && user.outletId !== +outletId) {
-      throw new ForbiddenException('Forbidden. Employees can only view their own outlet.');
+      throw new ForbiddenException(
+        "Forbidden. Employees can only view their own outlet.",
+      );
     }
     const data = await this.passesService.findByOutlet(+outletId);
     return {
-      message: 'Passes for outlet retrieved successfully',
+      message: "Passes for outlet retrieved successfully",
       data,
     };
   }
 
-  @Get('date-range')
+  // ─── DATE RANGE ───────────────────────────────────────────────────────────────
+
+  @Get("date-range")
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
-  @ApiOperation({ summary: 'Get passes by date range (Admin only)' })
-  @ApiQuery({ name: 'startDate', required: true, type: String })
-  @ApiQuery({ name: 'endDate', required: true, type: String })
-  @ApiQuery({ name: 'outletId', required: false, type: Number })
-  @ApiResponse({ status: 200, description: 'List of passes', type: [PassResponseDto] })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiOperation({
+    summary: "Get passes within a date range",
+    description:
+      "**Role:** ADMIN / SUPER_ADMIN\n\nFilter passes by start and end date.",
+  })
+  @ApiQuery({
+    name: "startDate",
+    required: true,
+    example: "2026-06-01",
+    description: "Start date (YYYY-MM-DD)",
+  })
+  @ApiQuery({
+    name: "endDate",
+    required: true,
+    example: "2026-06-30",
+    description: "End date (YYYY-MM-DD)",
+  })
+  @ApiQuery({
+    name: "outletId",
+    required: false,
+    type: Number,
+    description: "Filter by outlet",
+  })
+  @ApiResponse({
+    status: 200,
+    description: "Passes in date range",
+    type: [PassResponseDto],
+  })
+  @ApiResponse({ status: 401, description: "Missing or invalid Bearer token" })
+  @ApiResponse({ status: 403, description: "Forbidden" })
   async findByDateRange(
-    @Query('startDate') startDate: string,
-    @Query('endDate') endDate: string,
-    @Query('outletId') outletId?: string,
+    @Query("startDate") startDate: string,
+    @Query("endDate") endDate: string,
+    @Query("outletId") outletId?: string,
   ) {
     const data = await this.passesService.findByDateRange(
       new Date(startDate),
@@ -154,99 +325,177 @@ export class PassesController {
       outletId ? +outletId : undefined,
     );
     return {
-      message: 'Passes for date range retrieved successfully',
+      message: "Passes for date range retrieved successfully",
       data,
     };
   }
 
-  @Get('date-wise')
+  // ─── DATE-WISE ────────────────────────────────────────────────────────────────
+
+  @Get("date-wise")
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
-  @ApiOperation({ summary: 'Get admin passes grouped by date (Admin only)' })
-  @ApiResponse({ status: 200, description: 'Grouped passes', type: [PassDateGroupDto] })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiOperation({
+    summary: "Get passes grouped by date",
+    description:
+      "**Role:** ADMIN / SUPER_ADMIN\n\nUseful for building date-grouped dashboards.",
+  })
+  @ApiResponse({
+    status: 200,
+    description: "Date-grouped passes",
+    type: [PassDateGroupDto],
+  })
+  @ApiResponse({ status: 401, description: "Missing or invalid Bearer token" })
+  @ApiResponse({ status: 403, description: "Forbidden" })
   async findDateWise(@Query() query: PassListQueryDto) {
     const data = await this.passesService.findDateWise({
       status: query.status,
-      fromDate: query.fromDate ? new Date(`${query.fromDate}T00:00:00.000Z`) : undefined,
-      toDate: query.toDate ? new Date(`${query.toDate}T23:59:59.999Z`) : undefined,
+      fromDate: query.fromDate
+        ? new Date(`${query.fromDate}T00:00:00.000Z`)
+        : undefined,
+      toDate: query.toDate
+        ? new Date(`${query.toDate}T23:59:59.999Z`)
+        : undefined,
     });
     return {
-      message: 'Date-wise passes retrieved successfully',
+      message: "Date-wise passes retrieved successfully",
       data,
     };
   }
 
-  @Post(':id/redeem')
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.EMPLOYEE)
-  @ApiOperation({ summary: 'Redeem pass items (Login required)' })
-  @ApiResponse({ status: 200, description: 'Pass redeemed successfully', type: PassResponseDto })
-  @ApiResponse({ status: 400, description: 'Invalid redeem quantity, pass fully redeemed, or pass cancelled' })
-  @ApiResponse({ status: 404, description: 'Pass or pass item not found' })
+  // ─── REDEEM ───────────────────────────────────────────────────────────────────
+
+  @Post(":id/redeem")
+  @Roles(UserRole.ADMIN, UserRole.EMPLOYEE)
+  @ApiOperation({
+    summary: "Redeem sessions from a pass",
+    description:
+      "**Role:** ADMIN / EMPLOYEE\n\nDeducts the specified number of sessions from the pass item. Returns the updated pass state.",
+  })
+  @ApiParam({ name: "id", type: Number, example: 1, description: "Pass ID" })
+  @ApiResponse({
+    status: 200,
+    description: "Pass redeemed successfully",
+    type: PassResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description:
+      "Invalid redeem quantity, pass fully redeemed, or pass cancelled",
+  })
+  @ApiResponse({ status: 401, description: "Missing or invalid Bearer token" })
+  @ApiResponse({ status: 404, description: "Pass or pass item not found" })
   async redeem(
-    @Param('id') id: string,
+    @Param("id") id: string,
     @Body() redeemPassDto: RedeemPassDto,
     @GetUser() user: any,
   ) {
-    const filterOutletId = user.role === UserRole.EMPLOYEE ? user.outletId : undefined;
-    const data = await this.passesService.redeem(+id, redeemPassDto, user.userId, filterOutletId);
+    const filterOutletId =
+      user.role === UserRole.EMPLOYEE ? user.outletId : undefined;
+    const data = await this.passesService.redeem(
+      +id,
+      redeemPassDto,
+      user.userId,
+      filterOutletId,
+    );
     return {
-      message: 'Pass redeemed successfully',
+      message: "Pass redeemed successfully",
       data,
     };
   }
 
-  @Get(':id/redemptions')
+  @Get(":passId/redemptions")
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.EMPLOYEE)
-  @ApiOperation({ summary: 'Get pass redemption history' })
-  @ApiResponse({ status: 200, description: 'Pass redemption history' })
-  @ApiResponse({ status: 404, description: 'Pass not found' })
-  async getRedemptions(@Param('id') id: string) {
-    const data = await this.passesService.getRedemptions(+id);
+  @ApiOperation({
+    summary: "Get redemption history for a pass",
+    description:
+      "**Role:** All authenticated roles\n\nReturns a full log of all redemptions made against this pass.",
+  })
+  @ApiParam({
+    name: "passId",
+    type: Number,
+    example: 1,
+    description: "Pass ID",
+  })
+  @ApiResponse({ status: 200, description: "Redemption history" })
+  @ApiResponse({ status: 401, description: "Missing or invalid Bearer token" })
+  @ApiResponse({ status: 404, description: "Pass not found" })
+  async getRedemptions(@Param("passId") passId: string) {
+    const data = await this.passesService.getRedemptions(+passId);
     return {
-      message: 'Redemption history retrieved successfully',
+      message: "Redemption history retrieved successfully",
       data,
     };
   }
 
-  @Get(':id')
+  // ─── GET BY ID ────────────────────────────────────────────────────────────────
+
+  @Get(":id")
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.EMPLOYEE)
-  @ApiOperation({ summary: 'Get pass details by ID' })
-  @ApiResponse({ status: 200, description: 'Pass details', type: PassResponseDto })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 404, description: 'Pass not found' })
-  async findOne(@Param('id') id: string, @GetUser() user: any) {
-    const filterOutletId = user.role === UserRole.EMPLOYEE ? user.outletId : undefined;
+  @ApiOperation({
+    summary: "Get pass details by ID",
+    description: "**Role:** All authenticated roles",
+  })
+  @ApiParam({ name: "id", type: Number, example: 1, description: "Pass ID" })
+  @ApiResponse({
+    status: 200,
+    description: "Pass details",
+    type: PassResponseDto,
+  })
+  @ApiResponse({ status: 401, description: "Missing or invalid Bearer token" })
+  @ApiResponse({ status: 404, description: "Pass not found" })
+  async findOne(@Param("id") id: string, @GetUser() user: any) {
+    const filterOutletId =
+      user.role === UserRole.EMPLOYEE ? user.outletId : undefined;
     const data = await this.passesService.findOneMapped(+id, filterOutletId);
     return {
-      message: 'Pass retrieved successfully',
+      message: "Pass retrieved successfully",
       data,
     };
   }
 
-  @Patch(':id')
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
-  @ApiOperation({ summary: 'Update a pass (Admin only)' })
-  @ApiResponse({ status: 200, description: 'Pass updated successfully', type: PassResponseDto })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 404, description: 'Pass not found' })
-  async update(@Param('id') id: string, @Body() updatePassDto: UpdatePassDto) {
+  // ─── UPDATE ───────────────────────────────────────────────────────────────────
+
+  @Patch(":id")
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({
+    summary: "Update a pass",
+    description:
+      "**Role:** ADMIN only\n\nUpdate pass metadata (e.g., cancel a pass).",
+  })
+  @ApiParam({ name: "id", type: Number, example: 1, description: "Pass ID" })
+  @ApiResponse({
+    status: 200,
+    description: "Pass updated successfully",
+    type: PassResponseDto,
+  })
+  @ApiResponse({ status: 401, description: "Missing or invalid Bearer token" })
+  @ApiResponse({ status: 403, description: "Forbidden — ADMIN role required" })
+  @ApiResponse({ status: 404, description: "Pass not found" })
+  async update(@Param("id") id: string, @Body() updatePassDto: UpdatePassDto) {
     const data = await this.passesService.update(+id, updatePassDto);
     return {
-      message: 'Pass updated successfully',
+      message: "Pass updated successfully",
       data,
     };
   }
 
-  @Delete(':id')
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
-  @ApiOperation({ summary: 'Delete a pass (Admin only)' })
-  @ApiResponse({ status: 200, description: 'Pass deleted successfully' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 404, description: 'Pass not found' })
-  async remove(@Param('id') id: string) {
+  // ─── DELETE ───────────────────────────────────────────────────────────────────
+
+  @Delete(":id")
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({
+    summary: "Delete a pass",
+    description: "**Role:** ADMIN only",
+  })
+  @ApiParam({ name: "id", type: Number, example: 1, description: "Pass ID" })
+  @ApiResponse({ status: 200, description: "Pass deleted successfully" })
+  @ApiResponse({ status: 401, description: "Missing or invalid Bearer token" })
+  @ApiResponse({ status: 403, description: "Forbidden — ADMIN role required" })
+  @ApiResponse({ status: 404, description: "Pass not found" })
+  async remove(@Param("id") id: string) {
     await this.passesService.remove(+id);
     return {
-      message: 'Pass deleted successfully',
+      message: "Pass deleted successfully",
       data: null,
     };
   }

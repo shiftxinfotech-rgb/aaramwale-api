@@ -1,23 +1,32 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, OneToMany, CreateDateColumn, UpdateDateColumn } from 'typeorm';
-import { Customer } from '../customers/customer.entity';
-import { Outlet } from '../outlets/outlet.entity';
-import { User } from '../users/user.entity';
-import { PassItem } from './pass-item.entity';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  JoinColumn,
+  OneToMany,
+  CreateDateColumn,
+  UpdateDateColumn,
+} from "typeorm";
+import { Customer } from "../customers/customer.entity";
+import { Outlet } from "../outlets/outlet.entity";
+import { User } from "../users/user.entity";
+import { PassItem } from "./pass-item.entity";
 
 export enum PassDiscountType {
-  PERCENTAGE = 'PERCENTAGE',
-  FIXED = 'FIXED',
-  NONE = 'NONE',
+  PERCENTAGE = "PERCENTAGE",
+  FIXED = "FIXED",
+  NONE = "NONE",
 }
 
 export enum PassStatus {
-  ACTIVE = 'ACTIVE',
-  PARTIALLY_REDEEMED = 'PARTIALLY_REDEEMED',
-  FULLY_REDEEMED = 'FULLY_REDEEMED',
-  CANCELLED = 'CANCELLED',
+  ACTIVE = "ACTIVE",
+  PARTIALLY_REDEEMED = "PARTIALLY_REDEEMED",
+  FULLY_REDEEMED = "FULLY_REDEEMED",
+  CANCELLED = "CANCELLED",
 }
 
-@Entity('passes')
+@Entity("passes")
 export class Pass {
   @PrimaryGeneratedColumn()
   id: number;
@@ -28,34 +37,34 @@ export class Pass {
   @Column()
   customerId: number;
 
-  @ManyToOne(() => Customer, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'customerId' })
+  @ManyToOne(() => Customer, { onDelete: "CASCADE" })
+  @JoinColumn({ name: "customerId" })
   customer: Customer;
 
   @Column()
   outletId: number;
 
-  @ManyToOne(() => Outlet, (outlet) => outlet.passes, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'outletId' })
+  @ManyToOne(() => Outlet, (outlet) => outlet.passes, { onDelete: "CASCADE" })
+  @JoinColumn({ name: "outletId" })
   outlet: Outlet;
 
-  @Column({ type: 'decimal', precision: 10, scale: 2 })
+  @Column({ type: "decimal", precision: 10, scale: 2 })
   subtotalAmount: number;
 
   @Column({
-    type: 'enum',
+    type: "enum",
     enum: PassDiscountType,
     default: PassDiscountType.NONE,
   })
   discountType: PassDiscountType;
 
-  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
+  @Column({ type: "decimal", precision: 10, scale: 2, default: 0 })
   discountValue: number;
 
-  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
+  @Column({ type: "decimal", precision: 10, scale: 2, default: 0 })
   discountAmount: number;
 
-  @Column({ type: 'decimal', precision: 10, scale: 2 })
+  @Column({ type: "decimal", precision: 10, scale: 2 })
   finalAmount: number;
 
   @Column({ nullable: true })
@@ -64,15 +73,15 @@ export class Pass {
   @Column()
   generatedByUserId: number;
 
-  @ManyToOne(() => User, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'generatedByUserId' })
+  @ManyToOne(() => User, { onDelete: "CASCADE" })
+  @JoinColumn({ name: "generatedByUserId" })
   generatedByUser: User;
 
   @Column()
   generatedByRole: string;
 
   @Column({
-    type: 'character varying',
+    type: "character varying",
     default: PassStatus.ACTIVE,
   })
   status: PassStatus;

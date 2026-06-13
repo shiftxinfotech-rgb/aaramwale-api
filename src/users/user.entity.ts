@@ -1,15 +1,26 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, OneToMany, CreateDateColumn, UpdateDateColumn, BeforeInsert, BeforeUpdate } from 'typeorm';
-import { Outlet } from '../outlets/outlet.entity';
-import { Pass } from '../passes/pass.entity';
-import * as bcrypt from 'bcrypt';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  JoinColumn,
+  OneToMany,
+  CreateDateColumn,
+  UpdateDateColumn,
+  BeforeInsert,
+  BeforeUpdate,
+} from "typeorm";
+import { Outlet } from "../outlets/outlet.entity";
+import { Pass } from "../passes/pass.entity";
+import * as bcrypt from "bcrypt";
 
 export enum UserRole {
-  SUPER_ADMIN = 'SUPER_ADMIN',
-  ADMIN = 'ADMIN',
-  EMPLOYEE = 'EMPLOYEE',
+  SUPER_ADMIN = "SUPER_ADMIN",
+  ADMIN = "ADMIN",
+  EMPLOYEE = "EMPLOYEE",
 }
 
-@Entity('users')
+@Entity("users")
 export class User {
   @PrimaryGeneratedColumn()
   id: number;
@@ -20,21 +31,24 @@ export class User {
   @Column({ unique: true })
   email: string;
 
+  @Column({ nullable: true })
+  mobile: string;
+
   @Column({ select: false })
   password: string;
 
   @Column({
-    type: 'enum',
+    type: "enum",
     enum: UserRole,
     default: UserRole.EMPLOYEE,
   })
   role: UserRole;
 
   @Column({ nullable: true })
-  outletId: number;
+  outletId: number | null;
 
   @ManyToOne(() => Outlet, (outlet) => outlet.users, { nullable: true })
-  @JoinColumn({ name: 'outletId' })
+  @JoinColumn({ name: "outletId" })
   outlet: Outlet;
 
   @OneToMany(() => Pass, (pass) => pass.generatedByUser)
@@ -52,7 +66,7 @@ export class User {
   @BeforeInsert()
   @BeforeUpdate()
   async hashPassword() {
-    if (this.password && !this.password.startsWith('$2b$')) {
+    if (this.password && !this.password.startsWith("$2b$")) {
       const salt = await bcrypt.genSalt(10);
       this.password = await bcrypt.hash(this.password, salt);
     }

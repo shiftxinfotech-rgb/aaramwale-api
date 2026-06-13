@@ -1,11 +1,13 @@
-import { MigrationInterface, QueryRunner } from 'typeorm';
+import { MigrationInterface, QueryRunner } from "typeorm";
 
 export class RedesignPassToMultiItem1741604000000 implements MigrationInterface {
-  name = 'RedesignPassToMultiItem1741604000000';
+  name = "RedesignPassToMultiItem1741604000000";
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     // 0. Convert status column to character varying to remove typeorm enum constraints
-    await queryRunner.query('ALTER TABLE "passes" ALTER COLUMN "status" TYPE character varying');
+    await queryRunner.query(
+      'ALTER TABLE "passes" ALTER COLUMN "status" TYPE character varying',
+    );
 
     // 1. Create pass_items table if not exists
     await queryRunner.query(`
@@ -25,9 +27,13 @@ export class RedesignPassToMultiItem1741604000000 implements MigrationInterface 
     `);
 
     // 2. Migrate existing single-item passes into pass_items if pass_items is empty
-    const passesCount = await queryRunner.query('SELECT COUNT(*) FROM "passes"');
+    const passesCount = await queryRunner.query(
+      'SELECT COUNT(*) FROM "passes"',
+    );
     if (parseInt(passesCount[0].count, 10) > 0) {
-      const itemsCount = await queryRunner.query('SELECT COUNT(*) FROM "pass_items"');
+      const itemsCount = await queryRunner.query(
+        'SELECT COUNT(*) FROM "pass_items"',
+      );
       if (parseInt(itemsCount[0].count, 10) === 0) {
         await queryRunner.query(`
           INSERT INTO "pass_items" ("passId", "categoryId", "assetId", "quantity", "freeQuantity", "billableQuantity", "unitPrice", "lineTotal", "createdAt", "updatedAt")
@@ -102,8 +108,12 @@ export class RedesignPassToMultiItem1741604000000 implements MigrationInterface 
     `);
 
     // 7. Drop legacy constraints & columns
-    await queryRunner.query('ALTER TABLE "passes" DROP CONSTRAINT IF EXISTS "FK_passes_assets"');
-    await queryRunner.query('ALTER TABLE "passes" DROP CONSTRAINT IF EXISTS "FK_passes_users"');
+    await queryRunner.query(
+      'ALTER TABLE "passes" DROP CONSTRAINT IF EXISTS "FK_passes_assets"',
+    );
+    await queryRunner.query(
+      'ALTER TABLE "passes" DROP CONSTRAINT IF EXISTS "FK_passes_users"',
+    );
 
     await queryRunner.query(`
       ALTER TABLE "passes" 
@@ -137,7 +147,7 @@ export class RedesignPassToMultiItem1741604000000 implements MigrationInterface 
   public async down(queryRunner: QueryRunner): Promise<void> {
     // Revert alters
     await queryRunner.query('DROP TABLE IF EXISTS "pass_items" CASCADE');
-    
+
     await queryRunner.query(`
       ALTER TABLE "passes" 
       ADD COLUMN "assetId" integer,

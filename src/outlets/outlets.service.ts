@@ -1,13 +1,13 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource } from 'typeorm';
-import { Outlet } from './outlet.entity';
-import { CreateOutletDto } from './dto/create-outlet.dto';
-import { UpdateOutletDto } from './dto/update-outlet.dto';
-import { OutletListQueryDto } from './dto/outlet-list-query.dto';
-import { User } from '../users/user.entity';
-import { Asset } from '../assets/asset.entity';
-import { Pass } from '../passes/pass.entity';
+import { Injectable, NotFoundException } from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository, DataSource } from "typeorm";
+import { Outlet } from "./outlet.entity";
+import { CreateOutletDto } from "./dto/create-outlet.dto";
+import { UpdateOutletDto } from "./dto/update-outlet.dto";
+import { OutletListQueryDto } from "./dto/outlet-list-query.dto";
+import { User } from "../users/user.entity";
+import { Asset } from "../assets/asset.entity";
+import { Pass } from "../passes/pass.entity";
 
 @Injectable()
 export class OutletsService {
@@ -15,7 +15,7 @@ export class OutletsService {
     @InjectRepository(Outlet)
     private outletRepository: Repository<Outlet>,
     private dataSource: DataSource,
-  ) { }
+  ) {}
 
   async create(createOutletDto: CreateOutletDto): Promise<Outlet> {
     const outlet = this.outletRepository.create(createOutletDto);
@@ -23,27 +23,35 @@ export class OutletsService {
   }
 
   async findAll(query: OutletListQueryDto): Promise<any> {
-    const { page = 1, limit = 10, search, sortBy = 'createdAt', sortOrder = 'DESC', status } = query;
+    const {
+      page = 1,
+      limit = 10,
+      search,
+      sortBy = "createdAt",
+      sortOrder = "DESC",
+      status,
+    } = query;
 
-    const queryBuilder = this.outletRepository.createQueryBuilder('outlet')
-      .leftJoinAndSelect('outlet.users', 'user')
-      .leftJoinAndSelect('outlet.assets', 'asset');
+    const queryBuilder = this.outletRepository
+      .createQueryBuilder("outlet")
+      .leftJoinAndSelect("outlet.users", "user")
+      .leftJoinAndSelect("outlet.assets", "asset");
 
     if (status) {
-      const isActive = status === 'ACTIVE';
-      queryBuilder.andWhere('outlet.isActive = :isActive', { isActive });
+      const isActive = status === "ACTIVE";
+      queryBuilder.andWhere("outlet.isActive = :isActive", { isActive });
     }
 
     if (search) {
       queryBuilder.andWhere(
-        '(outlet.name ILIKE :search OR outlet.city ILIKE :search OR outlet.address ILIKE :search)',
-        { search: `%${search}%` }
+        "(outlet.name ILIKE :search OR outlet.city ILIKE :search OR outlet.address ILIKE :search)",
+        { search: `%${search}%` },
       );
     }
 
-    const allowedSortFields = ['id', 'name', 'city', 'isActive', 'createdAt'];
-    const sortField = allowedSortFields.includes(sortBy) ? sortBy : 'createdAt';
-    const order = sortOrder === 'ASC' ? 'ASC' : 'DESC';
+    const allowedSortFields = ["id", "name", "city", "isActive", "createdAt"];
+    const sortField = allowedSortFields.includes(sortBy) ? sortBy : "createdAt";
+    const order = sortOrder === "ASC" ? "ASC" : "DESC";
 
     queryBuilder.orderBy(`outlet.${sortField}`, order);
 
@@ -70,7 +78,7 @@ export class OutletsService {
   async findOne(id: number): Promise<Outlet> {
     const outlet = await this.outletRepository.findOne({
       where: { id },
-      relations: ['users', 'assets'],
+      relations: ["users", "assets"],
     });
 
     if (!outlet) {

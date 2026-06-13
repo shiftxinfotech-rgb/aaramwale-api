@@ -1,7 +1,7 @@
-import { MigrationInterface, QueryRunner } from 'typeorm';
+import { MigrationInterface, QueryRunner } from "typeorm";
 
 export class SimplifyTokensTable1741602000000 implements MigrationInterface {
-  name = 'SimplifyTokensTable1741602000000';
+  name = "SimplifyTokensTable1741602000000";
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`

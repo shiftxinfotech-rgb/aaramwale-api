@@ -1,10 +1,18 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
-import { Pass } from './pass.entity';
-import { PassItem } from './pass-item.entity';
-import { Asset } from '../assets/asset.entity';
-import { User } from '../users/user.entity';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  JoinColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+} from "typeorm";
+import { Pass } from "./pass.entity";
+import { PassItem } from "./pass-item.entity";
+import { Asset } from "../assets/asset.entity";
+import { User } from "../users/user.entity";
 
-@Entity('tokens')
+@Entity("tokens")
 export class Token {
   @PrimaryGeneratedColumn()
   id: number;
@@ -12,22 +20,22 @@ export class Token {
   @Column()
   passId: number;
 
-  @ManyToOne(() => Pass, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'passId' })
+  @ManyToOne(() => Pass, { onDelete: "CASCADE" })
+  @JoinColumn({ name: "passId" })
   pass: Pass;
 
   @Column()
   passItemId: number;
 
-  @ManyToOne(() => PassItem, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'passItemId' })
+  @ManyToOne(() => PassItem, { onDelete: "CASCADE" })
+  @JoinColumn({ name: "passItemId" })
   passItem: PassItem;
 
   @Column()
   assetId: number;
 
-  @ManyToOne(() => Asset, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'assetId' })
+  @ManyToOne(() => Asset, { onDelete: "CASCADE" })
+  @JoinColumn({ name: "assetId" })
   asset: Asset;
 
   @Column()
@@ -39,17 +47,20 @@ export class Token {
   @Column()
   redeemedByUserId: number;
 
-  @ManyToOne(() => User, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'redeemedByUserId' })
+  @ManyToOne(() => User, { onDelete: "CASCADE" })
+  @JoinColumn({ name: "redeemedByUserId" })
   redeemedByUser: User;
 
-  @Column({ default: 'ACTIVE' })
+  @Column({ default: "ACTIVE" })
   status: string;
 
   @Column({ nullable: true })
   remarks: string;
 
-  @Column({ type: 'timestamp without time zone', default: () => 'CURRENT_TIMESTAMP' })
+  @Column({
+    type: "timestamp without time zone",
+    default: () => "CURRENT_TIMESTAMP",
+  })
   redeemedAt: Date;
 
   @CreateDateColumn()

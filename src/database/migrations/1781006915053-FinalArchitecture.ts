@@ -1,21 +1,33 @@
 import { MigrationInterface, QueryRunner } from "typeorm";
 
 export class FinalArchitecture1781006915053 implements MigrationInterface {
-    name = 'FinalArchitecture1781006915053';
+  name = "FinalArchitecture1781006915053";
 
-    public async up(queryRunner: QueryRunner): Promise<void> {
-        // 1. Alter tokens table: Drop customerId, outletId, amount
-        await queryRunner.query(`ALTER TABLE "tokens" DROP CONSTRAINT IF EXISTS "FK_tokens_customers"`);
-        await queryRunner.query(`ALTER TABLE "tokens" DROP CONSTRAINT IF EXISTS "FK_56dfca5de188fe69a4265d225f2"`);
-        await queryRunner.query(`ALTER TABLE "tokens" DROP COLUMN IF EXISTS "customerId"`);
-        await queryRunner.query(`ALTER TABLE "tokens" DROP COLUMN IF EXISTS "outletId"`);
-        await queryRunner.query(`ALTER TABLE "tokens" DROP COLUMN IF EXISTS "amount"`);
+  public async up(queryRunner: QueryRunner): Promise<void> {
+    // 1. Alter tokens table: Drop customerId, outletId, amount
+    await queryRunner.query(
+      `ALTER TABLE "tokens" DROP CONSTRAINT IF EXISTS "FK_tokens_customers"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "tokens" DROP CONSTRAINT IF EXISTS "FK_56dfca5de188fe69a4265d225f2"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "tokens" DROP COLUMN IF EXISTS "customerId"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "tokens" DROP COLUMN IF EXISTS "outletId"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "tokens" DROP COLUMN IF EXISTS "amount"`,
+    );
 
-        // Add isFreeConsumption to tokens
-        await queryRunner.query(`ALTER TABLE "tokens" ADD COLUMN "isFreeConsumption" boolean NOT NULL DEFAULT false`);
+    // Add isFreeConsumption to tokens
+    await queryRunner.query(
+      `ALTER TABLE "tokens" ADD COLUMN "isFreeConsumption" boolean NOT NULL DEFAULT false`,
+    );
 
-        // 2. Create walk_in_sessions table
-        await queryRunner.query(`
+    // 2. Create walk_in_sessions table
+    await queryRunner.query(`
             CREATE TABLE "walk_in_sessions" (
                 "id" SERIAL PRIMARY KEY,
                 "sessionNumber" character varying NOT NULL UNIQUE,
@@ -42,26 +54,34 @@ export class FinalArchitecture1781006915053 implements MigrationInterface {
                 CONSTRAINT "FK_walk_in_sessions_users" FOREIGN KEY ("employeeId") REFERENCES "users"("id") ON DELETE CASCADE
             )
         `);
-    }
+  }
 
-    public async down(queryRunner: QueryRunner): Promise<void> {
-        // Drop walk_in_sessions
-        await queryRunner.query(`DROP TABLE IF EXISTS "walk_in_sessions" CASCADE`);
+  public async down(queryRunner: QueryRunner): Promise<void> {
+    // Drop walk_in_sessions
+    await queryRunner.query(`DROP TABLE IF EXISTS "walk_in_sessions" CASCADE`);
 
-        // Revert tokens changes
-        await queryRunner.query(`ALTER TABLE "tokens" DROP COLUMN IF EXISTS "isFreeConsumption"`);
-        await queryRunner.query(`ALTER TABLE "tokens" ADD COLUMN "amount" numeric(10,2)`);
-        await queryRunner.query(`ALTER TABLE "tokens" ADD COLUMN "outletId" integer`);
-        await queryRunner.query(`ALTER TABLE "tokens" ADD COLUMN "customerId" integer`);
+    // Revert tokens changes
+    await queryRunner.query(
+      `ALTER TABLE "tokens" DROP COLUMN IF EXISTS "isFreeConsumption"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "tokens" ADD COLUMN "amount" numeric(10,2)`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "tokens" ADD COLUMN "outletId" integer`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "tokens" ADD COLUMN "customerId" integer`,
+    );
 
-        // Add back constraints
-        await queryRunner.query(`
+    // Add back constraints
+    await queryRunner.query(`
             ALTER TABLE "tokens" 
             ADD CONSTRAINT "FK_tokens_customers" FOREIGN KEY ("customerId") REFERENCES "customers"("id") ON DELETE CASCADE
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             ALTER TABLE "tokens" 
             ADD CONSTRAINT "FK_56dfca5de188fe69a4265d225f2" FOREIGN KEY ("outletId") REFERENCES "outlets"("id") ON DELETE CASCADE
         `);
-    }
+  }
 }

@@ -1,9 +1,9 @@
-import { Injectable } from '@nestjs/common';
-import { DataSource } from 'typeorm';
-import { Customer } from '../customers/customer.entity';
-import { Pass } from '../passes/pass.entity';
-import { Asset } from '../assets/asset.entity';
-import { WalkInSession } from '../walk-in-sessions/walk-in-session.entity';
+import { Injectable } from "@nestjs/common";
+import { DataSource } from "typeorm";
+import { Customer } from "../customers/customer.entity";
+import { Pass } from "../passes/pass.entity";
+import { Asset } from "../assets/asset.entity";
+import { WalkInSession } from "../walk-in-sessions/walk-in-session.entity";
 
 @Injectable()
 export class SearchService {
@@ -26,17 +26,23 @@ export class SearchService {
     return { customers, passes, assets, walkInSessions };
   }
 
-  private async searchCustomers(term: string, outletId?: number): Promise<any[]> {
-    const qb = this.dataSource.getRepository(Customer)
-      .createQueryBuilder('customer')
-      .select(['customer.id', 'customer.name', 'customer.phone'])
-      .where('(customer.name ILIKE :term OR customer.phone ILIKE :term)', { term })
+  private async searchCustomers(
+    term: string,
+    outletId?: number,
+  ): Promise<any[]> {
+    const qb = this.dataSource
+      .getRepository(Customer)
+      .createQueryBuilder("customer")
+      .select(["customer.id", "customer.name", "customer.mobile"])
+      .where("(customer.name ILIKE :term OR customer.mobile ILIKE :term)", {
+        term,
+      })
       .limit(5);
 
     if (outletId) {
       qb.andWhere(
         `EXISTS (SELECT 1 FROM passes p WHERE p."customerId" = customer.id AND p."outletId" = :outletId)`,
-        { outletId }
+        { outletId },
       );
     }
 
@@ -44,63 +50,83 @@ export class SearchService {
   }
 
   private async searchPasses(term: string, outletId?: number): Promise<any[]> {
-    const qb = this.dataSource.getRepository(Pass)
-      .createQueryBuilder('pass')
-      .leftJoin('pass.customer', 'customer')
+    const qb = this.dataSource
+      .getRepository(Pass)
+      .createQueryBuilder("pass")
+      .leftJoin("pass.customer", "customer")
       .select([
-        'pass.id',
-        'pass.passNumber',
-        'pass.status',
-        'pass.finalAmount',
-        'customer.id',
-        'customer.name',
-        'customer.phone',
+        "pass.id",
+        "pass.passNumber",
+        "pass.status",
+        "pass.finalAmount",
+        "customer.id",
+        "customer.name",
+        "customer.mobile",
       ])
-      .where('(pass.passNumber ILIKE :term OR customer.name ILIKE :term OR customer.phone ILIKE :term)', { term })
-      .orderBy('pass.createdAt', 'DESC')
+      .where(
+        "(pass.passNumber ILIKE :term OR customer.name ILIKE :term OR customer.mobile ILIKE :term)",
+        { term },
+      )
+      .orderBy("pass.createdAt", "DESC")
       .limit(5);
 
     if (outletId) {
-      qb.andWhere('pass.outletId = :outletId', { outletId });
+      qb.andWhere("pass.outletId = :outletId", { outletId });
     }
 
     return qb.getMany();
   }
 
   private async searchAssets(term: string, outletId?: number): Promise<any[]> {
-    const qb = this.dataSource.getRepository(Asset)
-      .createQueryBuilder('asset')
-      .select(['asset.id', 'asset.assetCode', 'asset.assetName', 'asset.unitPrice', 'asset.isActive'])
-      .where('(asset.assetName ILIKE :term OR asset.assetCode ILIKE :term)', { term })
-      .andWhere('asset.isActive = true')
+    const qb = this.dataSource
+      .getRepository(Asset)
+      .createQueryBuilder("asset")
+      .select([
+        "asset.id",
+        "asset.assetCode",
+        "asset.assetName",
+        "asset.unitPrice",
+        "asset.isActive",
+      ])
+      .where("(asset.assetName ILIKE :term OR asset.assetCode ILIKE :term)", {
+        term,
+      })
+      .andWhere("asset.isActive = true")
       .limit(5);
 
     if (outletId) {
-      qb.andWhere('asset.outletId = :outletId', { outletId });
+      qb.andWhere("asset.outletId = :outletId", { outletId });
     }
 
     return qb.getMany();
   }
 
-  private async searchWalkInSessions(term: string, outletId?: number): Promise<any[]> {
-    const qb = this.dataSource.getRepository(WalkInSession)
-      .createQueryBuilder('session')
-      .leftJoin('session.customer', 'customer')
+  private async searchWalkInSessions(
+    term: string,
+    outletId?: number,
+  ): Promise<any[]> {
+    const qb = this.dataSource
+      .getRepository(WalkInSession)
+      .createQueryBuilder("session")
+      .leftJoin("session.customer", "customer")
       .select([
-        'session.id',
-        'session.sessionNumber',
-        'session.sessionDate',
-        'session.finalAmount',
-        'customer.id',
-        'customer.name',
-        'customer.phone',
+        "session.id",
+        "session.sessionNumber",
+        "session.sessionDate",
+        "session.finalAmount",
+        "customer.id",
+        "customer.name",
+        "customer.mobile",
       ])
-      .where('(session.sessionNumber ILIKE :term OR customer.name ILIKE :term OR customer.phone ILIKE :term)', { term })
-      .orderBy('session.createdAt', 'DESC')
+      .where(
+        "(session.sessionNumber ILIKE :term OR customer.name ILIKE :term OR customer.mobile ILIKE :term)",
+        { term },
+      )
+      .orderBy("session.createdAt", "DESC")
       .limit(5);
 
     if (outletId) {
-      qb.andWhere('session.outletId = :outletId', { outletId });
+      qb.andWhere("session.outletId = :outletId", { outletId });
     }
 
     return qb.getMany();

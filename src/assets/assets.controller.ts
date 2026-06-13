@@ -1,133 +1,265 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Query } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
-import { AssetsService } from './assets.service';
-import { CreateAssetDto } from './dto/create-asset.dto';
-import { UpdateAssetDto } from './dto/update-asset.dto';
-import { AssetResponseDto } from './dto/asset-response.dto';
-import { AssetListQueryDto } from './dto/asset-list-query.dto';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
-import { UserRole } from '../users/user.entity';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UseGuards,
+  Query,
+} from "@nestjs/common";
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+  ApiParam,
+} from "@nestjs/swagger";
+import { AssetsService } from "./assets.service";
+import { CreateAssetDto } from "./dto/create-asset.dto";
+import { UpdateAssetDto } from "./dto/update-asset.dto";
+import { AssetResponseDto } from "./dto/asset-response.dto";
+import { AssetListQueryDto } from "./dto/asset-list-query.dto";
+import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
+import { RolesGuard } from "../auth/guards/roles.guard";
+import { Roles } from "../auth/decorators/roles.decorator";
+import { UserRole } from "../users/user.entity";
+import { GetUser } from "../auth/decorators/get-user.decorator";
 
-@ApiTags('Assets')
-@ApiBearerAuth('access-token')
-@Controller('assets')
+@ApiTags("Assets")
+@ApiBearerAuth("access-token")
+@Controller("assets")
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class AssetsController {
   constructor(private readonly assetsService: AssetsService) {}
 
+  // ─── CREATE ──────────────────────────────────────────────────────────────────
+
   @Post()
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
-  @ApiOperation({ summary: 'Create a new asset (Admin only)' })
-  @ApiResponse({ status: 201, description: 'Asset created successfully', type: AssetResponseDto })
-  @ApiResponse({ status: 400, description: 'Asset code already exists at this outlet or validation failed' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 403, description: 'Forbidden' })
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({
+    summary: "Create a new asset",
+    description:
+      '**Role:** ADMIN only\n\nAssets are rentable items (e.g., "Treadmill A1", "Massage Chair 2"). Each asset belongs to an outlet and a category.',
+  })
+  @ApiResponse({
+    status: 201,
+    description: "Asset created successfully",
+    type: AssetResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description:
+      "Asset code already exists at this outlet or validation failed",
+  })
+  @ApiResponse({ status: 401, description: "Missing or invalid Bearer token" })
+  @ApiResponse({ status: 403, description: "Forbidden — ADMIN role required" })
   async create(@Body() createAssetDto: CreateAssetDto) {
     const data = await this.assetsService.create(createAssetDto);
     return {
-      message: 'Asset created successfully',
+      message: "Asset created successfully",
       data,
     };
   }
+
+  // ─── LIST ─────────────────────────────────────────────────────────────────────
 
   @Get()
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.EMPLOYEE)
-  @ApiOperation({ summary: 'Get all assets with pagination, search, status filter, and sorting' })
-  @ApiResponse({ status: 200, description: 'Paginated list of all assets' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async findAll(@Query() query: AssetListQueryDto) {
+  @ApiOperation({
+    summary: "List all assets with pagination, search and filters",
+    description:
+      "**Role:** All authenticated roles\n\nEMPLOYEEs automatically see only assets for their outlet. Supports \`page\`, \`limit\`, \`search\`, \`outletId\`, \`categoryId\`, and \`status\` filtering.",
+  })
+  @ApiResponse({
+    status: 200,
+    description: "Paginated list of assets",
+    type: [AssetResponseDto],
+  })
+  @ApiResponse({ status: 401, description: "Missing or invalid Bearer token" })
+  async findAll(@Query() query: AssetListQueryDto, @GetUser() user: any) {
+    if (user.role === UserRole.EMPLOYEE) {
+      query.outletId = user.outletId;
+    }
     const data = await this.assetsService.findAll(query);
     return {
-      message: 'Assets retrieved successfully',
+      message: "Assets retrieved successfully",
       data,
     };
   }
 
-  @Get('outlet/:outletId')
+  // ─── GET BY OUTLET ────────────────────────────────────────────────────────────
+
+  @Get("outlet/:outletId")
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.EMPLOYEE)
-  @ApiOperation({ summary: 'Get all assets by outlet' })
-  @ApiResponse({ status: 200, description: 'List of assets for outlet', type: [AssetResponseDto] })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async findByOutlet(@Param('outletId') outletId: string) {
+  @ApiOperation({
+    summary: "Get all assets for a specific outlet",
+    description:
+      "**Role:** All authenticated roles\n\nUseful for populating asset dropdowns in pass/walk-in forms scoped to a specific outlet.",
+  })
+  @ApiParam({
+    name: "outletId",
+    type: Number,
+    example: 1,
+    description: "Outlet ID",
+  })
+  @ApiResponse({
+    status: 200,
+    description: "List of assets for the outlet",
+    type: [AssetResponseDto],
+  })
+  @ApiResponse({ status: 401, description: "Missing or invalid Bearer token" })
+  async findByOutlet(@Param("outletId") outletId: string) {
     const data = await this.assetsService.findByOutlet(+outletId);
     return {
-      message: 'Assets for outlet retrieved successfully',
+      message: "Assets for outlet retrieved successfully",
       data,
     };
   }
 
-  @Get('category/:categoryId')
+  // ─── GET BY CATEGORY ──────────────────────────────────────────────────────────
+
+  @Get("category/:categoryId")
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.EMPLOYEE)
-  @ApiOperation({ summary: 'Get all assets by category' })
-  @ApiResponse({ status: 200, description: 'List of assets for category', type: [AssetResponseDto] })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async findByCategory(@Param('categoryId') categoryId: string) {
+  @ApiOperation({
+    summary: "Get all assets for a specific category",
+    description: "**Role:** All authenticated roles",
+  })
+  @ApiParam({
+    name: "categoryId",
+    type: Number,
+    example: 2,
+    description: "Category ID",
+  })
+  @ApiResponse({
+    status: 200,
+    description: "List of assets for the category",
+    type: [AssetResponseDto],
+  })
+  @ApiResponse({ status: 401, description: "Missing or invalid Bearer token" })
+  async findByCategory(@Param("categoryId") categoryId: string) {
     const data = await this.assetsService.findByCategory(+categoryId);
     return {
-      message: 'Assets for category retrieved successfully',
+      message: "Assets for category retrieved successfully",
       data,
     };
   }
 
-  @Get('outlet/:outletId/category/:categoryId')
+  // ─── GET BY OUTLET + CATEGORY ─────────────────────────────────────────────────
+
+  @Get("outlet/:outletId/category/:categoryId")
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.EMPLOYEE)
-  @ApiOperation({ summary: 'Get all assets by outlet and category' })
-  @ApiResponse({ status: 200, description: 'List of assets for outlet and category', type: [AssetResponseDto] })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiOperation({
+    summary: "Get assets filtered by outlet AND category",
+    description:
+      "**Role:** All authenticated roles\n\nKey endpoint for pass/walk-in generation — returns only assets matching both the customer's outlet and a selected category.",
+  })
+  @ApiParam({
+    name: "outletId",
+    type: Number,
+    example: 1,
+    description: "Outlet ID",
+  })
+  @ApiParam({
+    name: "categoryId",
+    type: Number,
+    example: 2,
+    description: "Category ID",
+  })
+  @ApiResponse({
+    status: 200,
+    description: "Filtered asset list",
+    type: [AssetResponseDto],
+  })
+  @ApiResponse({ status: 401, description: "Missing or invalid Bearer token" })
   async findByOutletAndCategory(
-    @Param('outletId') outletId: string,
-    @Param('categoryId') categoryId: string,
+    @Param("outletId") outletId: string,
+    @Param("categoryId") categoryId: string,
   ) {
-    const data = await this.assetsService.findByOutletAndCategory(+outletId, +categoryId);
+    const data = await this.assetsService.findByOutletAndCategory(
+      +outletId,
+      +categoryId,
+    );
     return {
-      message: 'Assets for outlet and category retrieved successfully',
+      message: "Assets for outlet and category retrieved successfully",
       data,
     };
   }
 
-  @Get(':id')
+  // ─── GET BY ID ────────────────────────────────────────────────────────────────
+
+  @Get(":id")
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.EMPLOYEE)
-  @ApiOperation({ summary: 'Get an asset by ID' })
-  @ApiResponse({ status: 200, description: 'Asset details', type: AssetResponseDto })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 404, description: 'Asset not found' })
-  async findOne(@Param('id') id: string) {
+  @ApiOperation({
+    summary: "Get asset by ID",
+    description: "**Role:** All authenticated roles",
+  })
+  @ApiParam({ name: "id", type: Number, example: 5, description: "Asset ID" })
+  @ApiResponse({
+    status: 200,
+    description: "Asset details",
+    type: AssetResponseDto,
+  })
+  @ApiResponse({ status: 401, description: "Missing or invalid Bearer token" })
+  @ApiResponse({ status: 404, description: "Asset not found" })
+  async findOne(@Param("id") id: string) {
     const data = await this.assetsService.findOne(+id);
     return {
-      message: 'Asset retrieved successfully',
+      message: "Asset retrieved successfully",
       data,
     };
   }
 
-  @Patch(':id')
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
-  @ApiOperation({ summary: 'Update an asset (Admin only)' })
-  @ApiResponse({ status: 200, description: 'Asset updated successfully', type: AssetResponseDto })
-  @ApiResponse({ status: 400, description: 'Validation failed or duplicate asset code' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 403, description: 'Forbidden' })
-  @ApiResponse({ status: 404, description: 'Asset not found' })
-  async update(@Param('id') id: string, @Body() updateAssetDto: UpdateAssetDto) {
+  // ─── UPDATE ───────────────────────────────────────────────────────────────────
+
+  @Patch(":id")
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({
+    summary: "Update an asset",
+    description: "**Role:** ADMIN only",
+  })
+  @ApiParam({ name: "id", type: Number, example: 5, description: "Asset ID" })
+  @ApiResponse({
+    status: 200,
+    description: "Asset updated successfully",
+    type: AssetResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: "Validation failed or duplicate asset code",
+  })
+  @ApiResponse({ status: 401, description: "Missing or invalid Bearer token" })
+  @ApiResponse({ status: 403, description: "Forbidden — ADMIN role required" })
+  @ApiResponse({ status: 404, description: "Asset not found" })
+  async update(
+    @Param("id") id: string,
+    @Body() updateAssetDto: UpdateAssetDto,
+  ) {
     const data = await this.assetsService.update(+id, updateAssetDto);
     return {
-      message: 'Asset updated successfully',
+      message: "Asset updated successfully",
       data,
     };
   }
 
-  @Delete(':id')
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
-  @ApiOperation({ summary: 'Delete an asset (Admin only)' })
-  @ApiResponse({ status: 200, description: 'Asset deleted successfully' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 403, description: 'Forbidden' })
-  @ApiResponse({ status: 404, description: 'Asset not found' })
-  async remove(@Param('id') id: string) {
+  // ─── DELETE ───────────────────────────────────────────────────────────────────
+
+  @Delete(":id")
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({
+    summary: "Delete an asset",
+    description: "**Role:** ADMIN only",
+  })
+  @ApiParam({ name: "id", type: Number, example: 5, description: "Asset ID" })
+  @ApiResponse({ status: 200, description: "Asset deleted successfully" })
+  @ApiResponse({ status: 401, description: "Missing or invalid Bearer token" })
+  @ApiResponse({ status: 403, description: "Forbidden — ADMIN role required" })
+  @ApiResponse({ status: 404, description: "Asset not found" })
+  async remove(@Param("id") id: string) {
     await this.assetsService.remove(+id);
     return {
-      message: 'Asset deleted successfully',
+      message: "Asset deleted successfully",
       data: null,
     };
   }

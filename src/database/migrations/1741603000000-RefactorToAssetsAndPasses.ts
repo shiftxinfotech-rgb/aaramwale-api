@@ -1,7 +1,7 @@
-import { MigrationInterface, QueryRunner } from 'typeorm';
+import { MigrationInterface, QueryRunner } from "typeorm";
 
 export class RefactorToAssetsAndPasses1741603000000 implements MigrationInterface {
-  name = 'RefactorToAssetsAndPasses1741603000000';
+  name = "RefactorToAssetsAndPasses1741603000000";
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     // 1. Create categories table if not exists
@@ -45,9 +45,11 @@ export class RefactorToAssetsAndPasses1741603000000 implements MigrationInterfac
     `);
 
     // 4. Migrate chairs to assets if chairs exist and assets is empty
-    const chairsTableExists = await queryRunner.hasTable('chairs');
+    const chairsTableExists = await queryRunner.hasTable("chairs");
     if (chairsTableExists) {
-      const assetsCount = await queryRunner.query('SELECT COUNT(*) FROM "assets"');
+      const assetsCount = await queryRunner.query(
+        'SELECT COUNT(*) FROM "assets"',
+      );
       if (parseInt(assetsCount[0].count, 10) === 0) {
         await queryRunner.query(`
           INSERT INTO "assets" ("id", "categoryId", "outletId", "assetCode", "assetName", "rentPerUse", "durationMinutes", "isActive", "createdAt", "updatedAt")
@@ -82,7 +84,9 @@ export class RefactorToAssetsAndPasses1741603000000 implements MigrationInterfac
     `);
 
     // 6. Ensure default customer exists
-    const customersCount = await queryRunner.query('SELECT COUNT(*) FROM "customers"');
+    const customersCount = await queryRunner.query(
+      'SELECT COUNT(*) FROM "customers"',
+    );
     if (parseInt(customersCount[0].count, 10) === 0) {
       await queryRunner.query(`
         INSERT INTO "customers" ("id", "name", "phone", "createdAt", "updatedAt")
@@ -97,9 +101,11 @@ export class RefactorToAssetsAndPasses1741603000000 implements MigrationInterfac
     `);
 
     // 7. Migrate tokens to passes if tokens exist and passes is empty
-    const tokensTableExists = await queryRunner.hasTable('tokens');
+    const tokensTableExists = await queryRunner.hasTable("tokens");
     if (tokensTableExists) {
-      const passesCount = await queryRunner.query('SELECT COUNT(*) FROM "passes"');
+      const passesCount = await queryRunner.query(
+        'SELECT COUNT(*) FROM "passes"',
+      );
       if (parseInt(passesCount[0].count, 10) === 0) {
         await queryRunner.query(`
           INSERT INTO "passes" (

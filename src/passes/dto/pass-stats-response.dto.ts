@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty } from "@nestjs/swagger";
 
 export class PassStatsResponseDto {
   @ApiProperty({ example: 10 })
@@ -13,13 +13,13 @@ export class PassStatsResponseDto {
   @ApiProperty({ example: 1 })
   cancelledPasses: number;
 
-  @ApiProperty({ example: 1000.00 })
+  @ApiProperty({ example: 1000.0 })
   totalRevenue: number;
 
-  @ApiProperty({ example: 600.00, required: false })
+  @ApiProperty({ example: 600.0, required: false })
   passRevenue?: number;
 
-  @ApiProperty({ example: 400.00, required: false })
+  @ApiProperty({ example: 400.0, required: false })
   walkInRevenue?: number;
 
   @ApiProperty({ example: 8, required: false })
@@ -28,6 +28,6 @@ export class PassStatsResponseDto {
   @ApiProperty({ example: 2, required: false })
   freeSessionsUsed?: number;
 
-  @ApiProperty({ example: '2026-06-02' })
+  @ApiProperty({ example: "2026-06-02" })
   date: string;
 }
