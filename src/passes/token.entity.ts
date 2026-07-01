@@ -44,6 +44,9 @@ export class Token {
   @Column({ default: false })
   isFreeConsumption: boolean;
 
+  @Column({ type: "decimal", precision: 10, scale: 2, default: 0 })
+  amount: number;
+
   @Column()
   redeemedByUserId: number;
 

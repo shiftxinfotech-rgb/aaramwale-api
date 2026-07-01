@@ -84,7 +84,10 @@ export class PassesService {
       }
 
       // Check item quantities
-      const paidQty = item.paidQuantity;
+      const paidQty = item.paidQuantity !== undefined ? item.paidQuantity : (item.quantity !== undefined ? item.quantity : undefined);
+      if (paidQty === undefined) {
+        throw new BadRequestException("Either paidQuantity or quantity must be provided");
+      }
       const freeQty = item.freeQuantity ?? 0;
       if (paidQty < 0 || freeQty < 0) {
         throw new BadRequestException("Quantities cannot be negative");
@@ -115,7 +118,7 @@ export class PassesService {
     let subtotal = 0;
     const computedItems = items.map((item) => {
       const asset = assetMap.get(item.assetId)!;
-      const paidQuantity = item.paidQuantity;
+      const paidQuantity = item.paidQuantity !== undefined ? item.paidQuantity : (item.quantity !== undefined ? item.quantity : 0);
       const freeQuantity = item.freeQuantity ?? 0;
       const totalQuantity = paidQuantity + freeQuantity;
       const unitPrice = Number(asset.unitPrice);
@@ -248,7 +251,7 @@ export class PassesService {
       .leftJoinAndSelect("pass.outlet", "outlet")
       .leftJoinAndSelect("pass.generatedByUser", "employee")
       .where(
-        "(pass.passNumber ILIKE :q OR customer.name ILIKE :q OR customer.phone ILIKE :q)",
+        "(pass.passNumber ILIKE :q OR customer.name ILIKE :q OR customer.mobile ILIKE :q)",
         { q: `%${q.trim()}%` },
       )
       .orderBy("pass.createdAt", "DESC")
@@ -328,7 +331,7 @@ export class PassesService {
       );
     }
     if (filters.customerMobile) {
-      query.andWhere("customer.phone = :customerMobile", {
+      query.andWhere("customer.mobile = :customerMobile", {
         customerMobile: filters.customerMobile,
       });
     }
@@ -354,7 +357,7 @@ export class PassesService {
 
     if (filters.search) {
       query.andWhere(
-        "(pass.passNumber ILIKE :search OR customer.name ILIKE :search OR customer.phone ILIKE :search)",
+        "(pass.passNumber ILIKE :search OR customer.name ILIKE :search OR customer.mobile ILIKE :search)",
         { search: `%${filters.search}%` },
       );
     }
@@ -683,6 +686,11 @@ export class PassesService {
         const R_free = Math.min(reqItem.redeemQuantity, freeRemaining);
         const R_paid = reqItem.redeemQuantity - R_free;
 
+        const subtotalVal = Number(pass.subtotalAmount);
+        const finalVal = Number(pass.finalAmount);
+        const discountRatio = subtotalVal > 0 ? finalVal / subtotalVal : 1;
+        const allocatedConsumptionValue = Number(passItem.unitPrice) * discountRatio;
+
         if (R_free > 0) {
           const freeToken = queryRunner.manager.create(Token, {
             passId: pass.id,
@@ -690,6 +698,7 @@ export class PassesService {
             assetId: passItem.assetId,
             redeemedQuantity: R_free,
             isFreeConsumption: true,
+            amount: 0,
             redeemedByUserId: userId,
             remarks: remarks ?? "Service redeemed (Free)",
             redeemedAt: new Date(),
@@ -704,6 +713,7 @@ export class PassesService {
             assetId: passItem.assetId,
             redeemedQuantity: R_paid,
             isFreeConsumption: false,
+            amount: Number((allocatedConsumptionValue * R_paid).toFixed(2)),
             redeemedByUserId: userId,
             remarks: remarks ?? "Service redeemed (Paid)",
             redeemedAt: new Date(),
@@ -728,6 +738,7 @@ export class PassesService {
     for (const item of pass.items) {
       const redeemed = finalRedemptionMap.get(item.id) ?? 0;
       const remaining = item.totalQuantity - redeemed;
+
       if (remaining > 0) {
         allRedeemed = false;
       }
@@ -736,7 +747,7 @@ export class PassesService {
       }
     }
 
-    let nextStatus = PassStatus.ACTIVE;
+    let nextStatus: PassStatus = pass.status;
     if (allRedeemed) {
       nextStatus = PassStatus.FULLY_REDEEMED;
     } else if (anyRedeemed) {
@@ -767,6 +778,7 @@ export class PassesService {
       assetName: t.asset?.assetName ?? "Unknown Asset",
       redeemedQuantity: t.redeemedQuantity,
       isFreeConsumption: t.isFreeConsumption,
+      amount: Number(t.amount),
       type: t.isFreeConsumption ? "FREE_SESSION" : "PAID_SESSION",
       employeeName: t.redeemedByUser?.name ?? "Unknown Employee",
       remarks: t.remarks,

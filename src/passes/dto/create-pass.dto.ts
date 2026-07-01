@@ -17,11 +17,17 @@ export class PassItemInputDto {
   @IsNotEmpty()
   assetId: number;
 
-  @ApiProperty({ example: 5, description: "Paid quantity" })
+  @ApiPropertyOptional({ example: 5, description: "Paid quantity" })
   @IsNumber()
   @Min(0)
-  @IsNotEmpty()
-  paidQuantity: number;
+  @IsOptional()
+  paidQuantity?: number;
+
+  @ApiPropertyOptional({ example: 5, description: "Paid sessions (alternative alias for paidQuantity)" })
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  quantity?: number;
 
   @ApiPropertyOptional({ example: 2, description: "Free quantity" })
   @IsNumber()

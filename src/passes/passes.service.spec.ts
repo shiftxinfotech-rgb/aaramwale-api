@@ -94,6 +94,8 @@ describe("PassesService - Redemption Priority", () => {
     const mockPass = {
       id: 1,
       status: PassStatus.ACTIVE,
+      subtotalAmount: 300,
+      finalAmount: 240, // 20% discount
       items: [
         {
           id: 10,
@@ -102,6 +104,7 @@ describe("PassesService - Redemption Priority", () => {
           freeQuantity: 1,
           paidQuantity: 3,
           totalQuantity: 4,
+          unitPrice: 100,
         },
       ],
     } as unknown as Pass;
@@ -147,10 +150,13 @@ describe("PassesService - Redemption Priority", () => {
     expect(freeToken).toBeDefined();
     expect(freeToken?.redeemedQuantity).toBe(1);
     expect(freeToken?.remarks).toBe("Service redeemed (Free)");
+    expect(freeToken?.amount).toBe(0); // Free sessions have amount = 0
 
     expect(paidToken).toBeDefined();
     expect(paidToken?.redeemedQuantity).toBe(1);
     expect(paidToken?.remarks).toBe("Service redeemed (Paid)");
+    // allocatedConsumptionValue = 100 * (240 / 300) = 80. paidToken amount = 80 * 1 = 80
+    expect(paidToken?.amount).toBe(80);
 
     getMapSpy.mockRestore();
   });
@@ -159,6 +165,8 @@ describe("PassesService - Redemption Priority", () => {
     const mockPass = {
       id: 1,
       status: PassStatus.ACTIVE,
+      subtotalAmount: 0,
+      finalAmount: 0,
       items: [
         {
           id: 10,
@@ -167,6 +175,7 @@ describe("PassesService - Redemption Priority", () => {
           freeQuantity: 2,
           paidQuantity: 0,
           totalQuantity: 2,
+          unitPrice: 100,
         },
       ],
     } as unknown as Pass;
@@ -204,6 +213,7 @@ describe("PassesService - Redemption Priority", () => {
     expect(savedTokens).toHaveLength(1);
     expect(savedTokens[0]?.isFreeConsumption).toBe(true);
     expect(savedTokens[0]?.redeemedQuantity).toBe(1);
+    expect(savedTokens[0]?.amount).toBe(0);
 
     getMapSpy.mockRestore();
   });
@@ -212,6 +222,8 @@ describe("PassesService - Redemption Priority", () => {
     const mockPass = {
       id: 1,
       status: PassStatus.ACTIVE,
+      subtotalAmount: 200,
+      finalAmount: 200,
       items: [
         {
           id: 10,
@@ -220,6 +232,7 @@ describe("PassesService - Redemption Priority", () => {
           freeQuantity: 0,
           paidQuantity: 2,
           totalQuantity: 2,
+          unitPrice: 100,
         },
       ],
     } as unknown as Pass;
@@ -257,6 +270,8 @@ describe("PassesService - Redemption Priority", () => {
     expect(savedTokens).toHaveLength(1);
     expect(savedTokens[0]?.isFreeConsumption).toBe(false);
     expect(savedTokens[0]?.redeemedQuantity).toBe(1);
+    // allocatedConsumptionValue = 100 * (200 / 200) = 100. amount = 100 * 1 = 100
+    expect(savedTokens[0]?.amount).toBe(100);
 
     getMapSpy.mockRestore();
   });
@@ -265,6 +280,8 @@ describe("PassesService - Redemption Priority", () => {
     const mockPass = {
       id: 1,
       status: PassStatus.PARTIALLY_REDEEMED,
+      subtotalAmount: 100,
+      finalAmount: 100,
       items: [
         {
           id: 10,
@@ -273,6 +290,7 @@ describe("PassesService - Redemption Priority", () => {
           freeQuantity: 1,
           paidQuantity: 1,
           totalQuantity: 2,
+          unitPrice: 100,
         },
       ],
     } as unknown as Pass;
@@ -285,6 +303,7 @@ describe("PassesService - Redemption Priority", () => {
       passItemId: 10,
       redeemedQuantity: 1,
       isFreeConsumption: true,
+      amount: 0,
     } as Token;
     queryRunnerManagerFindSpy.mockResolvedValue([existingToken]);
 
@@ -319,6 +338,7 @@ describe("PassesService - Redemption Priority", () => {
     expect(savedTokens).toHaveLength(1);
     expect(savedTokens[0]?.isFreeConsumption).toBe(false);
     expect(savedTokens[0]?.redeemedQuantity).toBe(1);
+    expect(savedTokens[0]?.amount).toBe(100);
 
     // The status of the pass should change to FULLY_REDEEMED
     expect(mockPass.status).toBe(PassStatus.FULLY_REDEEMED);

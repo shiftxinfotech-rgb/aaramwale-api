@@ -17,7 +17,7 @@ export class Customer {
   @Column()
   name: string;
 
-  @Column({ unique: true })
+  @Column({ unique: true, nullable: true })
   mobile: string;
 
   @Column({ type: "date", nullable: true })
