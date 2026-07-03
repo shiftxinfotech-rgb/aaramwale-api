@@ -47,21 +47,71 @@ export class ReportsService {
         "totalRevenue",
       );
 
+    // Query pass items grouped by categoryId AND parent pass's paymentMethod
+    const passPaymentQuery = this.dataSource
+      .createQueryBuilder("pass_items", "item")
+      .leftJoin("passes", "pass", "pass.id = item.passId")
+      .select("item.categoryId", "categoryId")
+      .addSelect("pass.paymentMethod", "paymentMethod")
+      .addSelect("COALESCE(SUM(item.lineTotal), 0)::float", "totalRevenue");
+
+    // Query walk-in sessions grouped by categoryId AND paymentMethod
+    const wiPaymentQuery = this.walkInSessionRepository
+      .createQueryBuilder("session")
+      .select("session.categoryId", "categoryId")
+      .addSelect("session.paymentMethod", "paymentMethod")
+      .addSelect(
+        "COALESCE(SUM(session.finalAmount), 0)::float",
+        "totalRevenue",
+      );
+
     if (fromDate) {
       passQuery.andWhere("item.createdAt >= :fromDate", {
         fromDate: new Date(`${fromDate}T00:00:00.000Z`),
       });
       wiQuery.andWhere("session.sessionDate >= :fromDate", { fromDate });
+      passPaymentQuery.andWhere("item.createdAt >= :fromDate", {
+        fromDate: new Date(`${fromDate}T00:00:00.000Z`),
+      });
+      wiPaymentQuery.andWhere("session.sessionDate >= :fromDate", { fromDate });
     }
     if (toDate) {
       passQuery.andWhere("item.createdAt <= :toDate", {
         toDate: new Date(`${toDate}T23:59:59.999Z`),
       });
       wiQuery.andWhere("session.sessionDate <= :toDate", { toDate });
+      passPaymentQuery.andWhere("item.createdAt <= :toDate", {
+        toDate: new Date(`${toDate}T23:59:59.999Z`),
+      });
+      wiPaymentQuery.andWhere("session.sessionDate <= :toDate", { toDate });
     }
 
-    const passRes = await passQuery.groupBy("item.categoryId").getRawMany();
-    const wiRes = await wiQuery.groupBy("session.categoryId").getRawMany();
+    const passRes: Array<{
+      categoryId: number;
+      totalPasses: number | string;
+      totalRevenue: number | string;
+    }> = await passQuery.groupBy("item.categoryId").getRawMany();
+    const wiRes: Array<{
+      categoryId: number;
+      totalWalkIns: number | string;
+      totalRevenue: number | string;
+    }> = await wiQuery.groupBy("session.categoryId").getRawMany();
+    const passPaymentRes: Array<{
+      categoryId: number;
+      paymentMethod?: string;
+      totalRevenue: number | string;
+    }> = await passPaymentQuery
+      .groupBy("item.categoryId")
+      .addGroupBy("pass.paymentMethod")
+      .getRawMany();
+    const wiPaymentRes: Array<{
+      categoryId: number;
+      paymentMethod?: string;
+      totalRevenue: number | string;
+    }> = await wiPaymentQuery
+      .groupBy("session.categoryId")
+      .addGroupBy("session.paymentMethod")
+      .getRawMany();
 
     const passMap = new Map<number, { count: number; rev: number }>();
     for (const r of passRes) {
@@ -79,6 +129,28 @@ export class ReportsService {
       });
     }
 
+    const categoryPaymentMap = new Map<number, Record<string, number>>();
+    for (const r of passPaymentRes) {
+      const cid = Number(r.categoryId);
+      const pm = r.paymentMethod || "UNKNOWN";
+      const rev = Number(r.totalRevenue);
+      if (!categoryPaymentMap.has(cid)) {
+        categoryPaymentMap.set(cid, {});
+      }
+      categoryPaymentMap.get(cid)![pm] =
+        (categoryPaymentMap.get(cid)![pm] ?? 0) + rev;
+    }
+    for (const r of wiPaymentRes) {
+      const cid = Number(r.categoryId);
+      const pm = r.paymentMethod || "UNKNOWN";
+      const rev = Number(r.totalRevenue);
+      if (!categoryPaymentMap.has(cid)) {
+        categoryPaymentMap.set(cid, {});
+      }
+      categoryPaymentMap.get(cid)![pm] =
+        (categoryPaymentMap.get(cid)![pm] ?? 0) + rev;
+    }
+
     return categories
       .map((cat) => {
         const p = passMap.get(cat.id) ?? { count: 0, rev: 0 };
@@ -90,6 +162,7 @@ export class ReportsService {
           totalPasses: p.count,
           totalWalkIns: w.count,
           totalRevenue: p.rev + w.rev,
+          paymentMethods: categoryPaymentMap.get(cat.id) ?? {},
         };
       })
       .sort((a, b) => b.totalRevenue - a.totalRevenue);
@@ -117,21 +190,71 @@ export class ReportsService {
         "totalRevenue",
       );
 
+    // Query pass items grouped by assetId AND parent pass's paymentMethod
+    const passPaymentQuery = this.dataSource
+      .createQueryBuilder("pass_items", "item")
+      .leftJoin("passes", "pass", "pass.id = item.passId")
+      .select("item.assetId", "assetId")
+      .addSelect("pass.paymentMethod", "paymentMethod")
+      .addSelect("COALESCE(SUM(item.lineTotal), 0)::float", "totalRevenue");
+
+    // Query walk-in sessions grouped by assetId AND paymentMethod
+    const wiPaymentQuery = this.walkInSessionRepository
+      .createQueryBuilder("session")
+      .select("session.assetId", "assetId")
+      .addSelect("session.paymentMethod", "paymentMethod")
+      .addSelect(
+        "COALESCE(SUM(session.finalAmount), 0)::float",
+        "totalRevenue",
+      );
+
     if (fromDate) {
       passQuery.andWhere("item.createdAt >= :fromDate", {
         fromDate: new Date(`${fromDate}T00:00:00.000Z`),
       });
       wiQuery.andWhere("session.sessionDate >= :fromDate", { fromDate });
+      passPaymentQuery.andWhere("item.createdAt >= :fromDate", {
+        fromDate: new Date(`${fromDate}T00:00:00.000Z`),
+      });
+      wiPaymentQuery.andWhere("session.sessionDate >= :fromDate", { fromDate });
     }
     if (toDate) {
       passQuery.andWhere("item.createdAt <= :toDate", {
         toDate: new Date(`${toDate}T23:59:59.999Z`),
       });
       wiQuery.andWhere("session.sessionDate <= :toDate", { toDate });
+      passPaymentQuery.andWhere("item.createdAt <= :toDate", {
+        toDate: new Date(`${toDate}T23:59:59.999Z`),
+      });
+      wiPaymentQuery.andWhere("session.sessionDate <= :toDate", { toDate });
     }
 
-    const passRes = await passQuery.groupBy("item.assetId").getRawMany();
-    const wiRes = await wiQuery.groupBy("session.assetId").getRawMany();
+    const passRes: Array<{
+      assetId: number;
+      totalPasses: number | string;
+      totalRevenue: number | string;
+    }> = await passQuery.groupBy("item.assetId").getRawMany();
+    const wiRes: Array<{
+      assetId: number;
+      totalWalkIns: number | string;
+      totalRevenue: number | string;
+    }> = await wiQuery.groupBy("session.assetId").getRawMany();
+    const passPaymentRes: Array<{
+      assetId: number;
+      paymentMethod?: string;
+      totalRevenue: number | string;
+    }> = await passPaymentQuery
+      .groupBy("item.assetId")
+      .addGroupBy("pass.paymentMethod")
+      .getRawMany();
+    const wiPaymentRes: Array<{
+      assetId: number;
+      paymentMethod?: string;
+      totalRevenue: number | string;
+    }> = await wiPaymentQuery
+      .groupBy("session.assetId")
+      .addGroupBy("session.paymentMethod")
+      .getRawMany();
 
     const passMap = new Map<number, { count: number; rev: number }>();
     for (const r of passRes) {
@@ -149,6 +272,28 @@ export class ReportsService {
       });
     }
 
+    const assetPaymentMap = new Map<number, Record<string, number>>();
+    for (const r of passPaymentRes) {
+      const aid = Number(r.assetId);
+      const pm = r.paymentMethod || "UNKNOWN";
+      const rev = Number(r.totalRevenue);
+      if (!assetPaymentMap.has(aid)) {
+        assetPaymentMap.set(aid, {});
+      }
+      assetPaymentMap.get(aid)![pm] =
+        (assetPaymentMap.get(aid)![pm] ?? 0) + rev;
+    }
+    for (const r of wiPaymentRes) {
+      const aid = Number(r.assetId);
+      const pm = r.paymentMethod || "UNKNOWN";
+      const rev = Number(r.totalRevenue);
+      if (!assetPaymentMap.has(aid)) {
+        assetPaymentMap.set(aid, {});
+      }
+      assetPaymentMap.get(aid)![pm] =
+        (assetPaymentMap.get(aid)![pm] ?? 0) + rev;
+    }
+
     return assets
       .map((asset) => {
         const p = passMap.get(asset.id) ?? { count: 0, rev: 0 };
@@ -161,6 +306,7 @@ export class ReportsService {
           totalPasses: p.count,
           totalWalkIns: w.count,
           totalRevenue: p.rev + w.rev,
+          paymentMethods: assetPaymentMap.get(asset.id) ?? {},
         };
       })
       .sort((a, b) => b.totalRevenue - a.totalRevenue);
@@ -188,21 +334,70 @@ export class ReportsService {
         "totalRevenue",
       );
 
+    // Query passes grouped by outletId AND paymentMethod
+    const passPaymentQuery = this.dataSource
+      .createQueryBuilder("passes", "pass")
+      .select("pass.outletId", "outletId")
+      .addSelect("pass.paymentMethod", "paymentMethod")
+      .addSelect("COALESCE(SUM(pass.finalAmount), 0)::float", "totalRevenue");
+
+    // Query walk-in sessions grouped by outletId AND paymentMethod
+    const wiPaymentQuery = this.walkInSessionRepository
+      .createQueryBuilder("session")
+      .select("session.outletId", "outletId")
+      .addSelect("session.paymentMethod", "paymentMethod")
+      .addSelect(
+        "COALESCE(SUM(session.finalAmount), 0)::float",
+        "totalRevenue",
+      );
+
     if (fromDate) {
       passQuery.andWhere("pass.createdAt >= :fromDate", {
         fromDate: new Date(`${fromDate}T00:00:00.000Z`),
       });
       wiQuery.andWhere("session.sessionDate >= :fromDate", { fromDate });
+      passPaymentQuery.andWhere("pass.createdAt >= :fromDate", {
+        fromDate: new Date(`${fromDate}T00:00:00.000Z`),
+      });
+      wiPaymentQuery.andWhere("session.sessionDate >= :fromDate", { fromDate });
     }
     if (toDate) {
       passQuery.andWhere("pass.createdAt <= :toDate", {
         toDate: new Date(`${toDate}T23:59:59.999Z`),
       });
       wiQuery.andWhere("session.sessionDate <= :toDate", { toDate });
+      passPaymentQuery.andWhere("pass.createdAt <= :toDate", {
+        toDate: new Date(`${toDate}T23:59:59.999Z`),
+      });
+      wiPaymentQuery.andWhere("session.sessionDate <= :toDate", { toDate });
     }
 
-    const passRes = await passQuery.groupBy("pass.outletId").getRawMany();
-    const wiRes = await wiQuery.groupBy("session.outletId").getRawMany();
+    const passRes: Array<{
+      outletId: number;
+      totalPasses: number | string;
+      totalRevenue: number | string;
+    }> = await passQuery.groupBy("pass.outletId").getRawMany();
+    const wiRes: Array<{
+      outletId: number;
+      totalWalkIns: number | string;
+      totalRevenue: number | string;
+    }> = await wiQuery.groupBy("session.outletId").getRawMany();
+    const passPaymentRes: Array<{
+      outletId: number;
+      paymentMethod?: string;
+      totalRevenue: number | string;
+    }> = await passPaymentQuery
+      .groupBy("pass.outletId")
+      .addGroupBy("pass.paymentMethod")
+      .getRawMany();
+    const wiPaymentRes: Array<{
+      outletId: number;
+      paymentMethod?: string;
+      totalRevenue: number | string;
+    }> = await wiPaymentQuery
+      .groupBy("session.outletId")
+      .addGroupBy("session.paymentMethod")
+      .getRawMany();
 
     const passMap = new Map<number, { count: number; rev: number }>();
     for (const r of passRes) {
@@ -220,6 +415,28 @@ export class ReportsService {
       });
     }
 
+    const outletPaymentMap = new Map<number, Record<string, number>>();
+    for (const r of passPaymentRes) {
+      const oid = Number(r.outletId);
+      const pm = r.paymentMethod || "UNKNOWN";
+      const rev = Number(r.totalRevenue);
+      if (!outletPaymentMap.has(oid)) {
+        outletPaymentMap.set(oid, {});
+      }
+      outletPaymentMap.get(oid)![pm] =
+        (outletPaymentMap.get(oid)![pm] ?? 0) + rev;
+    }
+    for (const r of wiPaymentRes) {
+      const oid = Number(r.outletId);
+      const pm = r.paymentMethod || "UNKNOWN";
+      const rev = Number(r.totalRevenue);
+      if (!outletPaymentMap.has(oid)) {
+        outletPaymentMap.set(oid, {});
+      }
+      outletPaymentMap.get(oid)![pm] =
+        (outletPaymentMap.get(oid)![pm] ?? 0) + rev;
+    }
+
     return outlets
       .map((outlet) => {
         const p = passMap.get(outlet.id) ?? { count: 0, rev: 0 };
@@ -231,6 +448,7 @@ export class ReportsService {
           totalPasses: p.count,
           totalWalkIns: w.count,
           totalRevenue: p.rev + w.rev,
+          paymentMethods: outletPaymentMap.get(outlet.id) ?? {},
         };
       })
       .sort((a, b) => b.totalRevenue - a.totalRevenue);
@@ -266,8 +484,16 @@ export class ReportsService {
       wiQuery.andWhere("session.sessionDate <= :toDate", { toDate });
     }
 
-    const passRes = await passQuery.groupBy("pass.customerId").getRawMany();
-    const wiRes = await wiQuery.groupBy("session.customerId").getRawMany();
+    const passRes: Array<{
+      customerId: number;
+      totalPasses: number | string;
+      totalRevenue: number | string;
+    }> = await passQuery.groupBy("pass.customerId").getRawMany();
+    const wiRes: Array<{
+      customerId: number;
+      totalWalkIns: number | string;
+      totalRevenue: number | string;
+    }> = await wiQuery.groupBy("session.customerId").getRawMany();
 
     const passMap = new Map<number, { count: number; rev: number }>();
     for (const r of passRes) {
@@ -349,23 +575,64 @@ export class ReportsService {
       .select("session.employeeId", "employeeId")
       .addSelect("COALESCE(SUM(session.finalAmount), 0)::float", "revenue");
 
+    // Query passes grouped by generatedByUserId AND paymentMethod
+    const passPaymentQuery = this.dataSource
+      .createQueryBuilder("passes", "pass")
+      .select("pass.generatedByUserId", "employeeId")
+      .addSelect("pass.paymentMethod", "paymentMethod")
+      .addSelect("COALESCE(SUM(pass.finalAmount), 0)::float", "totalRevenue");
+
+    // Query walk-in sessions grouped by employeeId AND paymentMethod
+    const wiPaymentQuery = this.walkInSessionRepository
+      .createQueryBuilder("session")
+      .select("session.employeeId", "employeeId")
+      .addSelect("session.paymentMethod", "paymentMethod")
+      .addSelect(
+        "COALESCE(SUM(session.finalAmount), 0)::float",
+        "totalRevenue",
+      );
+
     if (fromDate) {
       passQuery.andWhere("pass.createdAt >= :fromDate", {
         fromDate: new Date(`${fromDate}T00:00:00.000Z`),
       });
       wiQuery.andWhere("session.sessionDate >= :fromDate", { fromDate });
+      passPaymentQuery.andWhere("pass.createdAt >= :fromDate", {
+        fromDate: new Date(`${fromDate}T00:00:00.000Z`),
+      });
+      wiPaymentQuery.andWhere("session.sessionDate >= :fromDate", { fromDate });
     }
     if (toDate) {
       passQuery.andWhere("pass.createdAt <= :toDate", {
         toDate: new Date(`${toDate}T23:59:59.999Z`),
       });
       wiQuery.andWhere("session.sessionDate <= :toDate", { toDate });
+      passPaymentQuery.andWhere("pass.createdAt <= :toDate", {
+        toDate: new Date(`${toDate}T23:59:59.999Z`),
+      });
+      wiPaymentQuery.andWhere("session.sessionDate <= :toDate", { toDate });
     }
 
-    const passRes = await passQuery
+    const passRes: Array<{ employeeId: number; revenue: number | string }> =
+      await passQuery.groupBy("pass.generatedByUserId").getRawMany();
+    const wiRes: Array<{ employeeId: number; revenue: number | string }> =
+      await wiQuery.groupBy("session.employeeId").getRawMany();
+    const passPaymentRes: Array<{
+      employeeId: number;
+      paymentMethod?: string;
+      totalRevenue: number | string;
+    }> = await passPaymentQuery
       .groupBy("pass.generatedByUserId")
+      .addGroupBy("pass.paymentMethod")
       .getRawMany();
-    const wiRes = await wiQuery.groupBy("session.employeeId").getRawMany();
+    const wiPaymentRes: Array<{
+      employeeId: number;
+      paymentMethod?: string;
+      totalRevenue: number | string;
+    }> = await wiPaymentQuery
+      .groupBy("session.employeeId")
+      .addGroupBy("session.paymentMethod")
+      .getRawMany();
 
     const passMap = new Map<number, number>();
     for (const r of passRes) {
@@ -375,6 +642,28 @@ export class ReportsService {
     const wiMap = new Map<number, number>();
     for (const r of wiRes) {
       wiMap.set(Number(r.employeeId), Number(r.revenue));
+    }
+
+    const employeePaymentMap = new Map<number, Record<string, number>>();
+    for (const r of passPaymentRes) {
+      const eid = Number(r.employeeId);
+      const pm = r.paymentMethod || "UNKNOWN";
+      const rev = Number(r.totalRevenue);
+      if (!employeePaymentMap.has(eid)) {
+        employeePaymentMap.set(eid, {});
+      }
+      employeePaymentMap.get(eid)![pm] =
+        (employeePaymentMap.get(eid)![pm] ?? 0) + rev;
+    }
+    for (const r of wiPaymentRes) {
+      const eid = Number(r.employeeId);
+      const pm = r.paymentMethod || "UNKNOWN";
+      const rev = Number(r.totalRevenue);
+      if (!employeePaymentMap.has(eid)) {
+        employeePaymentMap.set(eid, {});
+      }
+      employeePaymentMap.get(eid)![pm] =
+        (employeePaymentMap.get(eid)![pm] ?? 0) + rev;
     }
 
     const employees = await this.dataSource.getRepository(User).find();
@@ -392,6 +681,7 @@ export class ReportsService {
           passesRevenue: pRev,
           walkInRevenue: wRev,
           totalRevenue: pRev + wRev,
+          paymentMethods: employeePaymentMap.get(emp.id) ?? {},
         };
       })
       .sort((a, b) => b.totalRevenue - a.totalRevenue);
@@ -419,12 +709,14 @@ export class ReportsService {
       });
     }
 
-    const res = await query.getRawOne();
+    const res:
+      | { totalConsumed?: number | string; freeConsumed?: number | string }
+      | undefined = await query.getRawOne();
     return {
-      totalSessionsConsumed: Number(res.totalConsumed),
-      freeSessionsConsumed: Number(res.freeConsumed),
+      totalSessionsConsumed: Number(res?.totalConsumed ?? 0),
+      freeSessionsConsumed: Number(res?.freeConsumed ?? 0),
       paidSessionsConsumed:
-        Number(res.totalConsumed) - Number(res.freeConsumed),
+        Number(res?.totalConsumed ?? 0) - Number(res?.freeConsumed ?? 0),
     };
   }
 

@@ -83,6 +83,31 @@ export class WalkInSession {
   @Column({ type: "date" })
   sessionDate: string;
 
+  @Column({ nullable: true })
+  paymentMethod: string;
+
+  @Column({
+    type: "decimal",
+    precision: 10,
+    scale: 2,
+    default: 0,
+    nullable: true,
+  })
+  paidAmount: number;
+
+  @Column({ nullable: true })
+  paymentStatus: string;
+
+  @Column({ type: "timestamp", nullable: true })
+  paymentDate: Date;
+
+  @Column({ nullable: true })
+  receivedByUserId: number;
+
+  @ManyToOne(() => User, { onDelete: "SET NULL", nullable: true })
+  @JoinColumn({ name: "receivedByUserId" })
+  receivedByUser: User;
+
   @CreateDateColumn()
   createdAt: Date;
 

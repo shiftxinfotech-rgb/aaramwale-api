@@ -111,6 +111,48 @@ export class WalkInSessionsService {
       );
     }
 
+    // Payment capture validation
+    const paymentMethod = createDto.paymentMethod;
+    const paidAmount =
+      createDto.paidAmount !== undefined ? createDto.paidAmount : finalAmount;
+    let paymentStatus = createDto.paymentStatus;
+    const paymentDate = createDto.paymentDate
+      ? new Date(createDto.paymentDate)
+      : new Date();
+    const receivedByUserId = employeeId;
+
+    if (finalAmount > 0) {
+      if (!paymentMethod) {
+        throw new BadRequestException("Payment method is required");
+      }
+      if (
+        !["CASH", "UPI", "CARD", "BANK_TRANSFER", "MIXED"].includes(
+          paymentMethod,
+        )
+      ) {
+        throw new BadRequestException("Invalid payment method");
+      }
+      if (paidAmount > finalAmount) {
+        throw new BadRequestException("Paid amount cannot exceed final amount");
+      }
+      if (!paymentStatus) {
+        paymentStatus =
+          paidAmount === finalAmount
+            ? "PAID"
+            : paidAmount > 0
+              ? "PARTIAL"
+              : "PENDING";
+      }
+    } else {
+      // finalAmount = 0
+      if (paidAmount !== 0) {
+        throw new BadRequestException(
+          "Paid amount must be 0 for free walk-ins",
+        );
+      }
+      paymentStatus = "PAID";
+    }
+
     const sDate = sessionDate ?? new Date().toISOString().split("T")[0];
 
     // 5. Database transaction
@@ -170,6 +212,11 @@ export class WalkInSessionsService {
         remarks: remarks ?? "Walk-in session",
         employeeId,
         sessionDate: sDate,
+        paymentMethod,
+        paidAmount,
+        paymentStatus,
+        paymentDate,
+        receivedByUserId,
       });
 
       const savedSession = await queryRunner.manager.save(session);

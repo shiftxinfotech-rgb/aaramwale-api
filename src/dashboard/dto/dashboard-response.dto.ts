@@ -1,4 +1,4 @@
-import { ApiProperty } from "@nestjs/swagger";
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 
 export class DashboardResponseDto {
   @ApiProperty({ example: 2500 })
@@ -18,4 +18,15 @@ export class DashboardResponseDto {
 
   @ApiProperty({ example: 45000 })
   monthlyRevenue: number;
+
+  @ApiPropertyOptional({
+    example: {
+      CASH: { count: 10, revenue: 1500 },
+      UPI: { count: 5, revenue: 1000 },
+    },
+  })
+  todaySalesByPaymentMethod?: Record<
+    string,
+    { count: number; revenue: number }
+  >;
 }

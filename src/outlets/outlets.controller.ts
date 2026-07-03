@@ -8,6 +8,7 @@ import {
   Delete,
   UseGuards,
   Query,
+  ForbiddenException,
 } from "@nestjs/common";
 import {
   ApiTags,
@@ -25,6 +26,7 @@ import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { RolesGuard } from "../auth/guards/roles.guard";
 import { Roles } from "../auth/decorators/roles.decorator";
 import { UserRole } from "../users/user.entity";
+import { GetUser } from "../auth/decorators/get-user.decorator";
 
 @ApiTags("Outlets")
 @ApiBearerAuth("access-token")
@@ -68,7 +70,7 @@ export class OutletsController {
   @ApiOperation({
     summary: "List all outlets with pagination, search and filters",
     description:
-      "**Role:** All authenticated roles\n\nSupports \`page\`, \`limit\`, \`search\`, and \`status\` filtering.",
+      "**Role:** All authenticated roles\n\nSupports `page`, `limit`, `search`, and `status` filtering.",
   })
   @ApiResponse({
     status: 200,
@@ -76,8 +78,16 @@ export class OutletsController {
     type: [OutletResponseDto],
   })
   @ApiResponse({ status: 401, description: "Missing or invalid Bearer token" })
-  async findAll(@Query() query: OutletListQueryDto) {
-    const data = await this.outletsService.findAll(query);
+  async findAll(
+    @Query() query: OutletListQueryDto,
+    @GetUser() user: { id: number; role: UserRole; outletId?: number },
+  ) {
+    const employeeOutletId =
+      user.role === UserRole.EMPLOYEE ? user.outletId : undefined;
+    const data = (await this.outletsService.findAll(
+      query,
+      employeeOutletId,
+    )) as unknown;
     return {
       message: "Outlets retrieved successfully",
       data,
@@ -100,8 +110,16 @@ export class OutletsController {
   })
   @ApiResponse({ status: 401, description: "Missing or invalid Bearer token" })
   @ApiResponse({ status: 404, description: "Outlet not found" })
-  async findOne(@Param("id") id: string) {
-    const data = await this.outletsService.findOne(+id);
+  async findOne(
+    @Param("id") id: string,
+    @GetUser() user: { id: number; role: UserRole; outletId?: number },
+  ) {
+    if (user.role === UserRole.EMPLOYEE && +id !== user.outletId) {
+      throw new ForbiddenException(
+        "You do not have permission to access this outlet",
+      );
+    }
+    const data = (await this.outletsService.findOne(+id)) as unknown;
     return {
       message: "Outlet retrieved successfully",
       data,

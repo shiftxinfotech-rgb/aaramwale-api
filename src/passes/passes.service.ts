@@ -154,86 +154,152 @@ export class PassesService {
       );
     }
 
-    // 4. Database Transaction
-    const queryRunner = this.dataSource.createQueryRunner();
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
+    // Payment Validation
+    let paymentMethod = createPassDto.paymentMethod;
+    let paidAmount = createPassDto.paidAmount;
+    let paymentStatus = createPassDto.paymentStatus;
+    let paymentDate: Date | null = null;
+    let receivedByUserId: number | null = null;
 
-    try {
-      // Generate Pass Number
-      const now = new Date();
-      const yyyy = now.getFullYear();
-      const mm = String(now.getMonth() + 1).padStart(2, "0");
-      const dd = String(now.getDate()).padStart(2, "0");
-      const dateStr = `${yyyy}${mm}${dd}`;
+    if (finalAmount > 0) {
+      if (!paymentMethod) {
+        throw new BadRequestException("Payment method is required");
+      }
+      if (!["CASH", "UPI", "CARD", "BANK_TRANSFER", "MIXED"].includes(paymentMethod)) {
+        throw new BadRequestException("Invalid payment method");
+      }
+      if (paidAmount === undefined || paidAmount === null) {
+        paidAmount = finalAmount;
+      }
+      if (paidAmount > finalAmount) {
+        throw new BadRequestException("Paid amount cannot exceed final amount");
+      }
+      paymentStatus = paymentStatus || "PAID";
+      paymentDate = new Date();
+      receivedByUserId = employeeId;
+    } else {
+      if (paymentMethod) {
+        if (!["CASH", "UPI", "CARD", "BANK_TRANSFER", "MIXED"].includes(paymentMethod)) {
+          throw new BadRequestException("Invalid payment method");
+        }
+      }
+      if (paidAmount === undefined || paidAmount === null) {
+        paidAmount = 0;
+      }
+      if (paidAmount > 0) {
+        throw new BadRequestException("Paid amount cannot exceed final amount of 0");
+      }
+      paymentStatus = paymentStatus || "PAID";
+      paymentDate = new Date();
+      receivedByUserId = employeeId;
+    }
 
-      const startOfDay = new Date(
-        now.getFullYear(),
-        now.getMonth(),
-        now.getDate(),
-        0,
-        0,
-        0,
-        0,
-      );
-      const endOfDay = new Date(
-        now.getFullYear(),
-        now.getMonth(),
-        now.getDate(),
-        23,
-        59,
-        59,
-        999,
-      );
+    // 4. Database Transaction with Retries on Unique Constraint Conflict
+    const maxRetries = 5;
+    let attempt = 0;
+    while (true) {
+      attempt++;
+      const queryRunner = this.dataSource.createQueryRunner();
+      await queryRunner.connect();
+      await queryRunner.startTransaction();
 
-      const todayPassesCount = await queryRunner.manager.count(Pass, {
-        where: {
-          createdAt: Between(startOfDay, endOfDay),
-        },
-      });
+      try {
+        // Generate Pass Number
+        const now = new Date();
+        const yyyy = now.getFullYear();
+        const mm = String(now.getMonth() + 1).padStart(2, "0");
+        const dd = String(now.getDate()).padStart(2, "0");
+        const dateStr = `${yyyy}${mm}${dd}`;
 
-      const nextSeq = todayPassesCount + 1;
-      const seqStr = String(nextSeq).padStart(4, "0");
-      const passNumber = `AW${dateStr}${seqStr}`;
+        const startOfDay = new Date(
+          now.getFullYear(),
+          now.getMonth(),
+          now.getDate(),
+          0,
+          0,
+          0,
+          0,
+        );
+        const endOfDay = new Date(
+          now.getFullYear(),
+          now.getMonth(),
+          now.getDate(),
+          23,
+          59,
+          59,
+          999,
+        );
 
-      const pass = queryRunner.manager.create(Pass, {
-        passNumber,
-        customerId,
-        outletId,
-        subtotalAmount: subtotal,
-        discountType: discType as PassDiscountType,
-        discountValue: discVal,
-        discountAmount,
-        finalAmount,
-        generatedByUserId: employeeId,
-        generatedByRole: employeeRole,
-        status: PassStatus.ACTIVE,
-      });
-
-      const savedPass = await queryRunner.manager.save(pass);
-
-      const passItems = computedItems.map((item) => {
-        return queryRunner.manager.create(PassItem, {
-          passId: savedPass.id,
-          categoryId: item.categoryId,
-          assetId: item.assetId,
-          paidQuantity: item.paidQuantity,
-          freeQuantity: item.freeQuantity,
-          totalQuantity: item.totalQuantity,
-          unitPrice: item.unitPrice,
-          lineTotal: item.lineTotal,
+        const todayPassesCount = await queryRunner.manager.count(Pass, {
+          where: {
+            createdAt: Between(startOfDay, endOfDay),
+          },
         });
-      });
 
-      await queryRunner.manager.save(PassItem, passItems);
-      await queryRunner.commitTransaction();
+        const nextSeq = todayPassesCount + 1;
+        const seqStr = String(nextSeq).padStart(4, "0");
+        const passNumber = `AW${dateStr}${seqStr}`;
 
-      return this.findOneMapped(savedPass.id);
-    } catch (err) {
-      await queryRunner.rollbackTransaction();
-      throw err;
-    } finally {
-      await queryRunner.release();
+        const pass = queryRunner.manager.create(Pass, {
+          passNumber,
+          customerId,
+          outletId,
+          subtotalAmount: subtotal,
+          discountType: discType as PassDiscountType,
+          discountValue: discVal,
+          discountAmount,
+          finalAmount,
+          generatedByUserId: employeeId,
+          generatedByRole: employeeRole,
+          status: PassStatus.ACTIVE,
+          paymentMethod,
+          paidAmount,
+          paymentStatus,
+          paymentDate,
+          receivedByUserId,
+        });
+
+        const savedPass = await queryRunner.manager.save(pass);
+
+        const passItems = computedItems.map((item) => {
+          return queryRunner.manager.create(PassItem, {
+            passId: savedPass.id,
+            categoryId: item.categoryId,
+            assetId: item.assetId,
+            paidQuantity: item.paidQuantity,
+            freeQuantity: item.freeQuantity,
+            totalQuantity: item.totalQuantity,
+            unitPrice: item.unitPrice,
+            lineTotal: item.lineTotal,
+          });
+        });
+
+        await queryRunner.manager.save(PassItem, passItems);
+        await queryRunner.commitTransaction();
+
+        return this.findOneMapped(savedPass.id);
+      } catch (err) {
+        await queryRunner.rollbackTransaction();
+
+        const error = err as { code?: string; message?: string };
+        const isUniqueConstraint =
+          error.code === "23505" ||
+          (error.message && (
+            error.message.includes("UQ_7681e678f3ead35ab2bf197692d") ||
+            error.message.includes("passNumber") ||
+            error.message.includes("unique constraint")
+          ));
+
+        if (isUniqueConstraint && attempt < maxRetries) {
+          // Wait a tiny random delay to avoid immediate lockstep retries
+          await new Promise((resolve) => setTimeout(resolve, Math.random() * 50));
+          continue;
+        }
+
+        throw err;
+      } finally {
+        await queryRunner.release();
+      }
     }
   }
 
@@ -887,6 +953,11 @@ export class PassesService {
         name: pass.generatedByUser?.name ?? "Unknown Employee",
       },
       status: computedStatus,
+      paymentMethod: pass.paymentMethod,
+      paidAmount: pass.paidAmount !== null && pass.paidAmount !== undefined ? Number(pass.paidAmount) : undefined,
+      paymentStatus: pass.paymentStatus,
+      paymentDate: pass.paymentDate,
+      receivedByUserId: pass.receivedByUserId,
       createdAt: pass.createdAt,
       updatedAt: pass.updatedAt,
     };

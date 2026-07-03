@@ -66,4 +66,29 @@ export class CreatePassDto {
   @Type(() => PassItemInputDto)
   @IsNotEmpty()
   items: PassItemInputDto[];
+
+  @ApiPropertyOptional({
+    example: "CASH",
+    enum: ["CASH", "UPI", "CARD", "BANK_TRANSFER", "MIXED"],
+  })
+  @IsString()
+  @IsIn(["CASH", "UPI", "CARD", "BANK_TRANSFER", "MIXED"])
+  @IsOptional()
+  paymentMethod?: string;
+
+  @ApiPropertyOptional({
+    example: "PAID",
+  })
+  @IsString()
+  @IsOptional()
+  paymentStatus?: string;
+
+  @ApiPropertyOptional({
+    example: 2800,
+    description: "Paid amount",
+  })
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  paidAmount?: number;
 }

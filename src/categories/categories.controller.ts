@@ -69,7 +69,7 @@ export class CategoriesController {
   @ApiOperation({
     summary: "List all categories with pagination, search and filters",
     description:
-      "**Role:** All authenticated roles\n\nEMPLOYEEs automatically see only categories for their outlet. Supports \`page\`, \`limit\`, \`search\`, \`outletId\`, and \`status\` filtering.",
+      "**Role:** All authenticated roles\n\nEMPLOYEEs automatically see only categories for their outlet. Supports `page`, `limit`, `search`, `outletId`, and `status` filtering.",
   })
   @ApiResponse({
     status: 200,
@@ -77,11 +77,15 @@ export class CategoriesController {
     type: [CategoryResponseDto],
   })
   @ApiResponse({ status: 401, description: "Missing or invalid Bearer token" })
-  async findAll(@Query() query: CategoryListQueryDto, @GetUser() user: any) {
+  async findAll(
+    @Query() query: CategoryListQueryDto,
+    @GetUser() user: { id: number; role: UserRole; outletId?: number },
+  ) {
     if (user.role === UserRole.EMPLOYEE) {
       query.outletId = user.outletId;
+      query.status = "ACTIVE";
     }
-    const data = await this.categoriesService.findAll(query);
+    const data = (await this.categoriesService.findAll(query)) as unknown;
     return {
       message: "Categories retrieved successfully",
       data,

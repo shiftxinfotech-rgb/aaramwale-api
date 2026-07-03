@@ -5,7 +5,7 @@ export class AddAmountToTokens1781500000000 implements MigrationInterface {
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
-      `ALTER TABLE "tokens" ADD COLUMN "amount" numeric(10,2) NOT NULL DEFAULT 0`,
+      `ALTER TABLE "tokens" ADD COLUMN IF NOT EXISTS "amount" numeric(10,2) NOT NULL DEFAULT 0`,
     );
   }
 

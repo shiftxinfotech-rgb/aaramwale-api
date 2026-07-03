@@ -40,6 +40,7 @@ describe("PassesService - Redemption Priority", () => {
     release: jest.fn(),
     manager: {
       find: jest.fn(),
+      count: jest.fn(),
       create: jest.fn((entity: unknown, data: Record<string, unknown>) => ({
         id: Math.floor(Math.random() * 1000) + 1,
         ...data,
@@ -345,5 +346,138 @@ describe("PassesService - Redemption Priority", () => {
     expect(passRepoSaveSpy).toHaveBeenCalledWith(mockPass);
 
     getMapSpy.mockRestore();
+  });
+
+  describe("PassesService - Creation Concurrency Retries", () => {
+    it("should retry transaction when unique constraint conflict occurs on passNumber", async () => {
+      mockCustomerRepository.findOne.mockResolvedValue({
+        id: 51,
+      });
+      mockAssetRepository.find.mockResolvedValue([
+        {
+          id: 61,
+          isActive: true,
+          unitPrice: 100,
+          categoryId: 1,
+          outletId: 4,
+        },
+      ]);
+
+      mockQueryRunner.manager.find = jest.fn().mockResolvedValue([]);
+      const managerCountMock = mockQueryRunner.manager.count;
+      managerCountMock.mockResolvedValue(5);
+
+      let saveAttempts = 0;
+      const managerSaveMock = mockQueryRunner.manager.save;
+      managerSaveMock.mockImplementation(
+        async (entity: unknown, data?: unknown) => {
+          await Promise.resolve();
+          const actualData = (data || entity) as Record<string, unknown>;
+          if (
+            actualData &&
+            typeof actualData === "object" &&
+            actualData.passNumber
+          ) {
+            saveAttempts++;
+            if (saveAttempts === 1) {
+              const err = new Error(
+                'duplicate key value violates unique constraint "UQ_7681e678f3ead35ab2bf197692d"',
+              ) as Error & { code?: string };
+              err.code = "23505";
+              throw err;
+            }
+          }
+          return { id: 123, ...actualData };
+        },
+      );
+
+      jest
+        .spyOn(service, "findOneMapped")
+        .mockResolvedValue({ id: 123 } as unknown as PassResponseDto);
+
+      const result = await service.create(
+        {
+          customerId: 51,
+          discountType: "NONE",
+          discountValue: 0,
+          items: [{ assetId: 61, paidQuantity: 1, freeQuantity: 0 }],
+          paymentMethod: "CASH",
+        },
+        5,
+        "ADMIN",
+        undefined,
+      );
+
+      expect(result).toEqual({ id: 123 });
+      expect(saveAttempts).toBe(2);
+    });
+  });
+
+  describe("PassesService - Payment Validation", () => {
+    beforeEach(() => {
+      mockCustomerRepository.findOne.mockResolvedValue({
+        id: 51,
+      });
+      mockAssetRepository.find.mockResolvedValue([
+        {
+          id: 61,
+          isActive: true,
+          unitPrice: 100,
+          categoryId: 1,
+          outletId: 4,
+        },
+      ]);
+    });
+
+    it("should throw BadRequestException if paymentMethod is missing and finalAmount > 0", async () => {
+      await expect(
+        service.create(
+          {
+            customerId: 51,
+            discountType: "NONE",
+            discountValue: 0,
+            items: [{ assetId: 61, paidQuantity: 1, freeQuantity: 0 }],
+          },
+          5,
+          "ADMIN",
+          undefined,
+        ),
+      ).rejects.toThrow("Payment method is required");
+    });
+
+    it("should throw BadRequestException if paymentMethod is invalid", async () => {
+      await expect(
+        service.create(
+          {
+            customerId: 51,
+            discountType: "NONE",
+            discountValue: 0,
+            items: [{ assetId: 61, paidQuantity: 1, freeQuantity: 0 }],
+            paymentMethod: "INVALID_METHOD",
+          },
+          5,
+          "ADMIN",
+          undefined,
+        ),
+      ).rejects.toThrow("Invalid payment method");
+    });
+
+    it("should throw BadRequestException if paidAmount exceeds finalAmount", async () => {
+      await expect(
+        service.create(
+          {
+            customerId: 51,
+            discountType: "NONE",
+            discountValue: 0,
+            items: [{ assetId: 61, paidQuantity: 1, freeQuantity: 0 }],
+            paymentMethod: "CASH",
+            paidAmount: 150,
+          },
+          5,
+          "ADMIN",
+          undefined,
+        ),
+      ).rejects.toThrow("Paid amount cannot exceed final amount");
+    });
   });
 });

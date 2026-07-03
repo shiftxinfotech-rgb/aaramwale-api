@@ -26,6 +26,14 @@ export enum PassStatus {
   CANCELLED = "CANCELLED",
 }
 
+export enum PassPaymentMethod {
+  CASH = "CASH",
+  UPI = "UPI",
+  CARD = "CARD",
+  BANK_TRANSFER = "BANK_TRANSFER",
+  MIXED = "MIXED",
+}
+
 @Entity("passes")
 export class Pass {
   @PrimaryGeneratedColumn()
@@ -79,6 +87,21 @@ export class Pass {
 
   @Column()
   generatedByRole: string;
+
+  @Column({ nullable: true })
+  paymentMethod: string;
+
+  @Column({ type: "decimal", precision: 10, scale: 2, default: 0, nullable: true })
+  paidAmount: number;
+
+  @Column({ nullable: true })
+  paymentStatus: string;
+
+  @Column({ type: "timestamp", nullable: true })
+  paymentDate: Date;
+
+  @Column({ nullable: true })
+  receivedByUserId: number;
 
   @Column({
     type: "character varying",

@@ -8,6 +8,7 @@ import {
   Delete,
   UseGuards,
   Query,
+  ForbiddenException,
 } from "@nestjs/common";
 import {
   ApiTags,
@@ -70,7 +71,7 @@ export class AssetsController {
   @ApiOperation({
     summary: "List all assets with pagination, search and filters",
     description:
-      "**Role:** All authenticated roles\n\nEMPLOYEEs automatically see only assets for their outlet. Supports \`page\`, \`limit\`, \`search\`, \`outletId\`, \`categoryId\`, and \`status\` filtering.",
+      "**Role:** All authenticated roles\n\nEMPLOYEEs automatically see only assets for their outlet. Supports `page`, `limit`, `search`, `outletId`, `categoryId`, and `status` filtering.",
   })
   @ApiResponse({
     status: 200,
@@ -78,11 +79,14 @@ export class AssetsController {
     type: [AssetResponseDto],
   })
   @ApiResponse({ status: 401, description: "Missing or invalid Bearer token" })
-  async findAll(@Query() query: AssetListQueryDto, @GetUser() user: any) {
+  async findAll(
+    @Query() query: AssetListQueryDto,
+    @GetUser() user: { id: number; role: UserRole; outletId?: number },
+  ) {
     if (user.role === UserRole.EMPLOYEE) {
       query.outletId = user.outletId;
     }
-    const data = await this.assetsService.findAll(query);
+    const data = (await this.assetsService.findAll(query)) as unknown;
     return {
       message: "Assets retrieved successfully",
       data,
@@ -110,8 +114,17 @@ export class AssetsController {
     type: [AssetResponseDto],
   })
   @ApiResponse({ status: 401, description: "Missing or invalid Bearer token" })
-  async findByOutlet(@Param("outletId") outletId: string) {
-    const data = await this.assetsService.findByOutlet(+outletId);
+  async findByOutlet(
+    @Param("outletId") outletId: string,
+    @GetUser() user: { id: number; role: UserRole; outletId?: number },
+  ) {
+    let targetOutletId = +outletId;
+    if (user.role === UserRole.EMPLOYEE && user.outletId) {
+      targetOutletId = user.outletId;
+    }
+    const data = (await this.assetsService.findByOutlet(
+      targetOutletId,
+    )) as unknown;
     return {
       message: "Assets for outlet retrieved successfully",
       data,
@@ -138,8 +151,19 @@ export class AssetsController {
     type: [AssetResponseDto],
   })
   @ApiResponse({ status: 401, description: "Missing or invalid Bearer token" })
-  async findByCategory(@Param("categoryId") categoryId: string) {
-    const data = await this.assetsService.findByCategory(+categoryId);
+  async findByCategory(
+    @Param("categoryId") categoryId: string,
+    @GetUser() user: { id: number; role: UserRole; outletId?: number },
+  ) {
+    let data: unknown;
+    if (user.role === UserRole.EMPLOYEE && user.outletId) {
+      data = (await this.assetsService.findByOutletAndCategory(
+        user.outletId,
+        +categoryId,
+      )) as unknown;
+    } else {
+      data = (await this.assetsService.findByCategory(+categoryId)) as unknown;
+    }
     return {
       message: "Assets for category retrieved successfully",
       data,
@@ -176,11 +200,16 @@ export class AssetsController {
   async findByOutletAndCategory(
     @Param("outletId") outletId: string,
     @Param("categoryId") categoryId: string,
+    @GetUser() user: { id: number; role: UserRole; outletId?: number },
   ) {
-    const data = await this.assetsService.findByOutletAndCategory(
-      +outletId,
+    let targetOutletId = +outletId;
+    if (user.role === UserRole.EMPLOYEE && user.outletId) {
+      targetOutletId = user.outletId;
+    }
+    const data = (await this.assetsService.findByOutletAndCategory(
+      targetOutletId,
       +categoryId,
-    );
+    )) as unknown;
     return {
       message: "Assets for outlet and category retrieved successfully",
       data,
@@ -203,8 +232,22 @@ export class AssetsController {
   })
   @ApiResponse({ status: 401, description: "Missing or invalid Bearer token" })
   @ApiResponse({ status: 404, description: "Asset not found" })
-  async findOne(@Param("id") id: string) {
-    const data = await this.assetsService.findOne(+id);
+  async findOne(
+    @Param("id") id: string,
+    @GetUser() user: { id: number; role: UserRole; outletId?: number },
+  ) {
+    const data = (await this.assetsService.findOne(+id)) as {
+      outletId?: number;
+    } | null;
+    if (
+      user.role === UserRole.EMPLOYEE &&
+      data &&
+      data.outletId !== user.outletId
+    ) {
+      throw new ForbiddenException(
+        "You do not have permission to access this asset",
+      );
+    }
     return {
       message: "Asset retrieved successfully",
       data,

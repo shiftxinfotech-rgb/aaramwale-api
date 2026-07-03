@@ -60,4 +60,38 @@ export class CreateWalkInSessionDto {
   @IsString()
   @IsOptional()
   sessionDate?: string;
+
+  @ApiPropertyOptional({
+    example: "CASH",
+    enum: ["CASH", "UPI", "CARD", "BANK_TRANSFER", "MIXED"],
+  })
+  @IsString()
+  @IsIn(["CASH", "UPI", "CARD", "BANK_TRANSFER", "MIXED"])
+  @IsOptional()
+  paymentMethod?: string;
+
+  @ApiPropertyOptional({ example: 100.0 })
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  paidAmount?: number;
+
+  @ApiPropertyOptional({
+    example: "PAID",
+    enum: ["PAID", "PARTIAL", "PENDING", "REFUNDED"],
+  })
+  @IsString()
+  @IsIn(["PAID", "PARTIAL", "PENDING", "REFUNDED"])
+  @IsOptional()
+  paymentStatus?: string;
+
+  @ApiPropertyOptional({ example: "2026-06-09T12:00:00.000Z" })
+  @IsString()
+  @IsOptional()
+  paymentDate?: string;
+
+  @ApiPropertyOptional({ example: 5 })
+  @IsNumber()
+  @IsOptional()
+  receivedByUserId?: number;
 }

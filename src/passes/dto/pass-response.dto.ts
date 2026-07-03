@@ -1,4 +1,4 @@
-import { ApiProperty } from "@nestjs/swagger";
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import {
   PassCustomerDto,
   PassCategoryDto,
@@ -77,6 +77,21 @@ export class PassResponseDto {
 
   @ApiProperty({ example: 90.0 })
   finalAmount: number;
+
+  @ApiPropertyOptional({ example: "CASH" })
+  paymentMethod?: string;
+
+  @ApiPropertyOptional({ example: 90.0 })
+  paidAmount?: number;
+
+  @ApiPropertyOptional({ example: "PAID" })
+  paymentStatus?: string;
+
+  @ApiPropertyOptional({ example: "2026-06-02T12:00:00.000Z" })
+  paymentDate?: Date;
+
+  @ApiPropertyOptional({ example: 5 })
+  receivedByUserId?: number;
 
   @ApiProperty({ type: PassEmployeeDto })
   employee: PassEmployeeDto;

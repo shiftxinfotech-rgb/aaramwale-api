@@ -29,6 +29,15 @@ export class CustomersService {
     user?: { role: string; outletId?: number },
   ): Promise<any> {
     if (user && user.role === "EMPLOYEE") {
+      if (
+        createCustomerDto.outletId !== undefined &&
+        createCustomerDto.outletId !== null &&
+        createCustomerDto.outletId !== user.outletId
+      ) {
+        throw new BadRequestException(
+          "Employee cannot create customer for another outlet",
+        );
+      }
       createCustomerDto.outletId = user.outletId;
     }
 
@@ -95,7 +104,7 @@ export class CustomersService {
 
     if (outletId) {
       queryBuilder.andWhere(
-        `EXISTS (SELECT 1 FROM passes p WHERE p."customerId" = customer.id AND p."outletId" = :outletId)`,
+        `(customer.outletId = :outletId OR EXISTS (SELECT 1 FROM passes p WHERE p."customerId" = customer.id AND p."outletId" = :outletId))`,
         { outletId },
       );
     }
@@ -246,10 +255,10 @@ export class CustomersService {
       countQuery.andWhere("customer.mobile = :mobile", { mobile });
     }
 
-    const totalRecords = await countQuery
+    const rawResult: { count?: string } | undefined = await countQuery
       .select("COUNT(DISTINCT customer.id)", "count")
-      .getRawOne()
-      .then((res) => parseInt(res.count || "0", 10));
+      .getRawOne();
+    const totalRecords = parseInt(rawResult?.count || "0", 10);
 
     // Order By
     const allowedSortFields = [
@@ -282,7 +291,18 @@ export class CustomersService {
 
     queryBuilder.offset((page - 1) * limit).limit(limit);
 
-    const rawResults = await queryBuilder.getRawMany();
+    interface CustomerRawRow {
+      id: number;
+      name: string;
+      mobile: string;
+      outletId?: number;
+      outletName?: string;
+      totalPasses?: number | string;
+      totalSpent?: number | string;
+      lastVisitDate?: string | Date;
+    }
+
+    const rawResults: CustomerRawRow[] = await queryBuilder.getRawMany();
 
     const formattedData = rawResults.map((row) => {
       let lastVisitDate: string | null = null;
@@ -330,7 +350,7 @@ export class CustomersService {
 
   async findOneProfile(
     id: number,
-    user: any,
+    user: { role: string; outletId?: number },
   ): Promise<CustomerProfileResponseDto> {
     // Load with outlet relation for outletName
     const customer = await this.customersRepository.findOne({

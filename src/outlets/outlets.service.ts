@@ -22,7 +22,10 @@ export class OutletsService {
     return this.outletRepository.save(outlet);
   }
 
-  async findAll(query: OutletListQueryDto): Promise<any> {
+  async findAll(
+    query: OutletListQueryDto,
+    employeeOutletId?: number,
+  ): Promise<any> {
     const {
       page = 1,
       limit = 10,
@@ -36,6 +39,12 @@ export class OutletsService {
       .createQueryBuilder("outlet")
       .leftJoinAndSelect("outlet.users", "user")
       .leftJoinAndSelect("outlet.assets", "asset");
+
+    if (employeeOutletId) {
+      queryBuilder.andWhere("outlet.id = :employeeOutletId", {
+        employeeOutletId,
+      });
+    }
 
     if (status) {
       const isActive = status === "ACTIVE";
