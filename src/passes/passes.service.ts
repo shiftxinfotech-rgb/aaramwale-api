@@ -4,7 +4,7 @@ import {
   BadRequestException,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository, Between, DataSource } from "typeorm";
+import { Repository, DataSource } from "typeorm";
 import { Pass, PassStatus, PassDiscountType } from "./pass.entity";
 import { PassItem } from "./pass-item.entity";
 import { Asset } from "../assets/asset.entity";
@@ -210,35 +210,25 @@ export class PassesService {
         const mm = String(now.getMonth() + 1).padStart(2, "0");
         const dd = String(now.getDate()).padStart(2, "0");
         const dateStr = `${yyyy}${mm}${dd}`;
+        const prefix = `AW${dateStr}`;
 
-        const startOfDay = new Date(
-          now.getFullYear(),
-          now.getMonth(),
-          now.getDate(),
-          0,
-          0,
-          0,
-          0,
-        );
-        const endOfDay = new Date(
-          now.getFullYear(),
-          now.getMonth(),
-          now.getDate(),
-          23,
-          59,
-          59,
-          999,
+        const lastPassResult = await queryRunner.manager.query(
+          `SELECT "passNumber" FROM "passes" WHERE "passNumber" LIKE $1 ORDER BY "passNumber" DESC LIMIT 1 FOR UPDATE`,
+          [`${prefix}%`],
         );
 
-        const todayPassesCount = await queryRunner.manager.count(Pass, {
-          where: {
-            createdAt: Between(startOfDay, endOfDay),
-          },
-        });
+        let nextSeq = 1;
+        if (lastPassResult.length > 0) {
+          const lastPassNumber = lastPassResult[0].passNumber;
+          const suffixStr = lastPassNumber.substring(prefix.length);
+          const suffixNum = parseInt(suffixStr, 10);
+          if (!isNaN(suffixNum)) {
+            nextSeq = suffixNum + 1;
+          }
+        }
 
-        const nextSeq = todayPassesCount + 1;
         const seqStr = String(nextSeq).padStart(4, "0");
-        const passNumber = `AW${dateStr}${seqStr}`;
+        const passNumber = `${prefix}${seqStr}`;
 
         const pass = queryRunner.manager.create(Pass, {
           passNumber,

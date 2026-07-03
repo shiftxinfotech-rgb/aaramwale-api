@@ -41,6 +41,7 @@ describe("PassesService - Redemption Priority", () => {
     manager: {
       find: jest.fn(),
       count: jest.fn(),
+      query: jest.fn(),
       create: jest.fn((entity: unknown, data: Record<string, unknown>) => ({
         id: Math.floor(Math.random() * 1000) + 1,
         ...data,
@@ -89,6 +90,7 @@ describe("PassesService - Redemption Priority", () => {
     queryRunnerManagerSaveSpy = mockQueryRunner.manager.save;
 
     jest.clearAllMocks();
+    mockQueryRunner.manager.query.mockResolvedValue([]);
   });
 
   it("should consume FREE sessions before PAID sessions (free + paid combination)", async () => {
@@ -364,8 +366,23 @@ describe("PassesService - Redemption Priority", () => {
       ]);
 
       mockQueryRunner.manager.find = jest.fn().mockResolvedValue([]);
-      const managerCountMock = mockQueryRunner.manager.count;
-      managerCountMock.mockResolvedValue(5);
+      const managerQueryMock = mockQueryRunner.manager.query;
+      
+      const now = new Date();
+      const yyyy = now.getFullYear();
+      const mm = String(now.getMonth() + 1).padStart(2, "0");
+      const dd = String(now.getDate()).padStart(2, "0");
+      const dateStr = `${yyyy}${mm}${dd}`;
+
+      let queryCallCount = 0;
+      managerQueryMock.mockImplementation(async () => {
+        queryCallCount++;
+        if (queryCallCount === 1) {
+          return [];
+        } else {
+          return [{ passNumber: `AW${dateStr}0005` }];
+        }
+      });
 
       let saveAttempts = 0;
       const managerSaveMock = mockQueryRunner.manager.save;
