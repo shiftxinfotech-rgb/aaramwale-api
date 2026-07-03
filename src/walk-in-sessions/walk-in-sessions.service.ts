@@ -4,7 +4,7 @@ import {
   BadRequestException,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository, Between, DataSource } from "typeorm";
+import { Repository, DataSource } from "typeorm";
 import { WalkInSession } from "./walk-in-session.entity";
 import { CreateWalkInSessionDto } from "./dto/create-walk-in-session.dto";
 import { Customer } from "../customers/customer.entity";
@@ -167,34 +167,25 @@ export class WalkInSessionsService {
       const dd = String(now.getDate()).padStart(2, "0");
       const dateStr = `${yyyy}${mm}${dd}`;
 
-      const startOfDay = new Date(
-        now.getFullYear(),
-        now.getMonth(),
-        now.getDate(),
-        0,
-        0,
-        0,
-        0,
-      );
-      const endOfDay = new Date(
-        now.getFullYear(),
-        now.getMonth(),
-        now.getDate(),
-        23,
-        59,
-        59,
-        999,
+      const prefix = `WI${dateStr}`;
+
+      const lastSessionResult = await queryRunner.manager.query(
+        `SELECT "sessionNumber" FROM "walk_in_sessions" WHERE "sessionNumber" LIKE $1 ORDER BY "sessionNumber" DESC LIMIT 1 FOR UPDATE`,
+        [`${prefix}%`],
       );
 
-      const todayCount = await queryRunner.manager.count(WalkInSession, {
-        where: {
-          createdAt: Between(startOfDay, endOfDay),
-        },
-      });
+      let nextSeq = 1;
+      if (lastSessionResult.length > 0) {
+        const lastSessionNumber = lastSessionResult[0].sessionNumber;
+        const suffixStr = lastSessionNumber.substring(prefix.length);
+        const suffixNum = parseInt(suffixStr, 10);
+        if (!isNaN(suffixNum)) {
+          nextSeq = suffixNum + 1;
+        }
+      }
 
-      const nextSeq = todayCount + 1;
       const seqStr = String(nextSeq).padStart(4, "0");
-      const sessionNumber = `WI${dateStr}${seqStr}`;
+      const sessionNumber = `${prefix}${seqStr}`;
 
       const session = queryRunner.manager.create(WalkInSession, {
         sessionNumber,

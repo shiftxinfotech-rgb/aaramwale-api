@@ -14,6 +14,12 @@ export const getTypeOrmConfig = (): TypeOrmModuleOptions => ({
   synchronize: process.env.NODE_ENV !== "production",
   migrationsRun: true,
   logging: false,
+  extra: {
+    max: 20,
+    min: 2,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 5000,
+  },
 });
 
 export const dataSourceOptions: DataSourceOptions = {

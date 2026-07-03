@@ -41,6 +41,7 @@ describe("WalkInSessionsService - Payment Capture & Validation", () => {
     release: jest.fn(),
     manager: {
       count: jest.fn(() => 0),
+      query: jest.fn().mockResolvedValue([]),
       create: jest.fn((entity: unknown, data: Record<string, unknown>) => ({
         id: 1,
         ...data,
