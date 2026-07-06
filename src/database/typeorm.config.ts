@@ -12,7 +12,7 @@ export const getTypeOrmConfig = (): TypeOrmModuleOptions => ({
   entities: [__dirname + "/../**/*.entity{.ts,.js}"],
   migrations: [__dirname + "/migrations/*{.ts,.js}"],
   synchronize: process.env.NODE_ENV !== "production",
-  migrationsRun: true,
+  migrationsRun: false,
   logging: false,
   extra: {
     max: 20,
