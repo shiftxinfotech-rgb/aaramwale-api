@@ -182,6 +182,7 @@ export class AssetsService {
           `Category with ID ${updateAssetDto.categoryId} not found`,
         );
       }
+      asset.category = category;
     }
 
     if (updateAssetDto.outletId && updateAssetDto.outletId !== asset.outletId) {
@@ -193,6 +194,7 @@ export class AssetsService {
           `Outlet with ID ${updateAssetDto.outletId} not found`,
         );
       }
+      asset.outlet = outlet;
     }
 
     const nextOutletId = updateAssetDto.outletId ?? asset.outletId;

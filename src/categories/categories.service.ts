@@ -6,6 +6,7 @@ import {
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { Category } from "./category.entity";
+import { Asset } from "../assets/asset.entity";
 import { CreateCategoryDto } from "./dto/create-category.dto";
 import { UpdateCategoryDto } from "./dto/update-category.dto";
 import { CategoryListQueryDto } from "./dto/category-list-query.dto";
@@ -15,6 +16,8 @@ export class CategoriesService {
   constructor(
     @InjectRepository(Category)
     private categoryRepository: Repository<Category>,
+    @InjectRepository(Asset)
+    private assetRepository: Repository<Asset>,
   ) {}
 
   async create(createCategoryDto: CreateCategoryDto): Promise<Category> {
@@ -43,26 +46,80 @@ export class CategoriesService {
       outletId,
     } = query;
 
+    if (outletId) {
+      // 1. Find all active assets in the selected outlet and join their categories
+      const assets = await this.assetRepository.find({
+        where: {
+          outletId,
+          isActive: true,
+        },
+        relations: ["category"],
+      });
+
+      // 2. Extract unique categories from those assets
+      const categoriesMap = new Map<number, Category>();
+      for (const asset of assets) {
+        if (asset.category) {
+          // If category status filter is passed
+          if (status) {
+            const matchActive = status === "ACTIVE";
+            if (asset.category.isActive !== matchActive) {
+              continue;
+            }
+          }
+          // If search term filter is passed
+          if (search) {
+            if (!asset.category.name.toLowerCase().includes(search.toLowerCase())) {
+              continue;
+            }
+          }
+          categoriesMap.set(asset.category.id, asset.category);
+        }
+      }
+
+      const categories = Array.from(categoriesMap.values());
+
+      // 3. Sort the extracted unique categories
+      const allowedSortFields = ["id", "name", "isActive", "createdAt"];
+      const sortField = allowedSortFields.includes(sortBy) ? sortBy : "createdAt";
+      const orderMultiplier = sortOrder === "ASC" ? 1 : -1;
+
+      categories.sort((a, b) => {
+        let valA = a[sortField as keyof Category];
+        let valB = b[sortField as keyof Category];
+
+        if (valA instanceof Date) valA = valA.getTime() as any;
+        if (valB instanceof Date) valB = valB.getTime() as any;
+
+        if (valA < valB) return -1 * orderMultiplier;
+        if (valA > valB) return 1 * orderMultiplier;
+        return 0;
+      });
+
+      // 4. Paginate the resulting unique categories
+      const totalRecords = categories.length;
+      const totalPages = Math.ceil(totalRecords / limit);
+      const paginatedData = categories.slice((page - 1) * limit, page * limit);
+
+      return {
+        data: paginatedData,
+        meta: {
+          page,
+          limit,
+          totalRecords,
+          totalPages,
+          hasNextPage: page < totalPages,
+          hasPreviousPage: page > 1,
+        },
+      };
+    }
+
+    // Default behavior when outletId is not provided
     const queryBuilder = this.categoryRepository.createQueryBuilder("category");
 
     if (status) {
       const isActive = status === "ACTIVE";
       queryBuilder.andWhere("category.isActive = :isActive", { isActive });
-    }
-
-    if (outletId) {
-      queryBuilder.andWhere((qb) => {
-        const subQuery = qb
-          .subQuery()
-          .select("asset.categoryId")
-          .from("assets", "asset")
-          .where("asset.outletId = :outletId")
-          .andWhere("asset.isActive = :isActiveAsset")
-          .getQuery();
-        return "category.id IN " + subQuery;
-      });
-      queryBuilder.setParameter("outletId", outletId);
-      queryBuilder.setParameter("isActiveAsset", true);
     }
 
     if (search) {
