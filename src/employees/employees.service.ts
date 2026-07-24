@@ -343,7 +343,8 @@ export class EmployeesService {
       }
     }
 
-    Object.assign(employee, updateEmployeeDto);
+    const { email, ...restUpdates } = updateEmployeeDto;
+    Object.assign(employee, restUpdates);
     await this.userRepository.save(employee);
 
     // Reload with relations

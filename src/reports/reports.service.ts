@@ -7,7 +7,7 @@ import { Outlet } from "../outlets/outlet.entity";
 import { Customer } from "../customers/customer.entity";
 import { WalkInSession } from "../walk-in-sessions/walk-in-session.entity";
 import { Token } from "../passes/token.entity";
-import { User } from "../users/user.entity";
+import { User, UserRole } from "../users/user.entity";
 
 @Injectable()
 export class ReportsService {
@@ -666,7 +666,11 @@ export class ReportsService {
         (employeePaymentMap.get(eid)![pm] ?? 0) + rev;
     }
 
-    const employees = await this.dataSource.getRepository(User).find();
+    const employees = await this.dataSource.getRepository(User).find({
+      where: {
+        role: UserRole.EMPLOYEE,
+      },
+    });
 
     return employees
       .map((emp) => {

@@ -16,6 +16,11 @@ export class UpdateEmployeeDto {
   @IsOptional()
   name?: string;
 
+  @ApiPropertyOptional({ example: "employee@example.com" })
+  @IsEmail()
+  @IsOptional()
+  email?: string;
+
   @ApiPropertyOptional({ example: "newpassword123" })
   @IsString()
   @MinLength(6)

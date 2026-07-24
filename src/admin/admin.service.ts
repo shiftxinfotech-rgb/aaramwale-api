@@ -83,9 +83,11 @@ export class AdminService {
       throw new NotFoundException(`Admin with ID ${id} not found`);
     }
 
+    const { email, ...restUpdates } = updateAdminDto;
+
     // Merge updates — the @BeforeUpdate hook will re-hash password if changed
     Object.assign(admin, {
-      ...updateAdminDto,
+      ...restUpdates,
       role: UserRole.ADMIN, // enforce role
       outletId: null, // enforce no outlet
     });
